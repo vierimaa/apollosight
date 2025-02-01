@@ -10,7 +10,8 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "eslint .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "npm run test:unit -- --run",
+		"transform": "tsx scripts/transform-data.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
@@ -21,14 +22,13 @@
 		"eslint": "^9.7.0",
 		"eslint-plugin-svelte": "^2.36.0",
 		"globals": "^15.0.0",
+		"papaparse": "^5.5.2",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.0.0",
+		"uuid": "^11.0.5",
 		"vite": "^5.0.3",
 		"vitest": "^2.0.4"
-	},
-	"dependencies": {
-		"papaparse": "^5.4.1"
 	}
 }
