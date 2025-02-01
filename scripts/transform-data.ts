@@ -21,6 +21,27 @@ interface WorkoutData {
   uuid: string;
 }
 
+interface Set {
+  set_index: number;
+  set_type: string;
+  weight_kg: number;
+  reps: number;
+}
+
+interface Exercise {
+  exercise_title: string;
+  exercise_notes: string | null;
+  sets: Set[];
+}
+
+interface WorkoutSession {
+  title: string;
+  start_time: string;
+  end_time: string;
+  uuid: string;
+  exercises: Exercise[];
+}
+
 const parseDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toISOString(); // Converts to ISO 8601 format, e.g., "2024-10-01T17:02:00.000Z"
@@ -46,9 +67,49 @@ const addUuid = (workout: WorkoutData): WorkoutData => {
   };
 };
 
-const writeToJson = (data: WorkoutData[]): void => {
+function groupWorkoutsBySession(workouts: WorkoutData[]): WorkoutSession[] {
+  const sessionMap = new Map<string, WorkoutSession>();
+
+  for (const workout of workouts) {
+    if (!sessionMap.has(workout.uuid)) {
+      sessionMap.set(workout.uuid, {
+        title: workout.title,
+        start_time: workout.start_time,
+        end_time: workout.end_time,
+        uuid: workout.uuid,
+        exercises: [],
+      });
+    }
+
+    const session = sessionMap.get(workout.uuid)!;
+
+    let exercise = session.exercises.find(
+      (ex) => ex.exercise_title === workout.exercise_title
+    );
+
+    if (!exercise) {
+      exercise = {
+        exercise_title: workout.exercise_title,
+        exercise_notes: workout.exercise_notes,
+        sets: [],
+      };
+      session.exercises.push(exercise);
+    }
+
+    exercise.sets.push({
+      set_index: workout.set_index,
+      set_type: workout.set_type,
+      weight_kg: Number(workout.weight_kg),
+      reps: Number(workout.reps),
+    });
+  }
+
+  return Array.from(sessionMap.values());
+}
+
+const writeToJson = (data: any[], fileName: string): void => {
   const json = JSON.stringify(data, null, 2);
-  const outputPath = path.join(process.cwd(), "static", "workoutData.json");
+  const outputPath = path.join(process.cwd(), "static", fileName);
   fs.writeFileSync(outputPath, json);
 };
 
@@ -70,7 +131,11 @@ try {
     return addUuid(withDuration);
   });
 
-  writeToJson(transformedData);
+  const groupedData = groupWorkoutsBySession(transformedData);
+
+  console.info("Transforming data...");
+  writeToJson(transformedData, "workoutData.json");
+  writeToJson(groupedData, "sessionData.json");
   console.info("Data transformation complete.");
 } catch (error) {
   console.error("Error processing data:", error);
