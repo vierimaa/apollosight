@@ -1,26 +1,54 @@
 <script lang="ts">
-  let { data } = $props();
+  const { data } = $props();
 
   // Helper to create a slug from the exercise title
   function slugify(title: string) {
-    return title.replace(/\s+/g, '-').toLowerCase();
+    return title.replace(/\s+/g, "-").toLowerCase();
   }
+
+  let filter = $state("");
+
+  const filteredExercises = $derived(() =>
+    data.exercises.filter((exercise) =>
+      exercise.toLowerCase().includes(filter.trim().toLowerCase())
+    )
+  );
 </script>
 
-<h1>All Exercises</h1>
-<ul class="exercise-list">
-  {#each data.exercises as exercise}
-    <li>
-      <a href={`/exercises/${slugify(exercise)}`}>{exercise}</a>
-    </li>
-  {/each}
-</ul>
+<div class="container">
+  <h1>All Exercises</h1>
+  <input
+    class="filter-box"
+    type="text"
+    placeholder="Filter exercises..."
+    value={filter}
+    oninput={(e) => {
+      console.log((e.currentTarget as HTMLInputElement).value);
+      filter = (e.currentTarget as HTMLInputElement).value;
+    }}
+  />
+  <ul class="exercise-list">
+    {#each filteredExercises() as exercise}
+      <li>
+        <a href={`/exercises/${slugify(exercise)}`}>{exercise}</a>
+      </li>
+    {/each}
+  </ul>
+</div>
 
 <style>
   h1 {
     margin-bottom: 1.5rem;
     font-size: 2rem;
     color: #2c3e50;
+  }
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: 100vh; /* optional for vertical centering */
   }
 
   .exercise-list {
@@ -53,5 +81,17 @@
   .exercise-list a:hover {
     color: #0d47a1;
     text-decoration: underline;
+  }
+
+  .filter-box {
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+    display: block;
   }
 </style>
