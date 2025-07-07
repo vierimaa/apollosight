@@ -1,38 +1,28 @@
+import { error } from "@sveltejs/kit";
+import type { PageServerLoad } from "./$types";
 
-// Load JSON data using event.fetch
-export async function load({ fetch }) {
-  const response = await fetch('/static/workoutData.json'); // Relative URL with event.fetch
-  const jsonData = await response.json();
-  
-  // // Using sessionData directly
-  // const response2 = await fetch('/static/sessionData.json');
-  // const jsonData2 = await response2.json();
-  // console.log(jsonData2[1])
+export const load: PageServerLoad = async () => {
+  try {
+    const response = await fetch("http://localhost:3000/workouts");
 
-  // Function to group workouts by uuid
-  interface Workout {
-    uuid: string;
-    [key: string]: any;
+    if (!response.ok) {
+      throw error(
+        response.status,
+        `Failed to fetch workouts: ${response.statusText}`
+      );
+    }
+
+    const workoutData = await response.json();
+
+    if (!workoutData || workoutData.length === 0) {
+      throw error(404, "No workouts found");
+    }
+
+    return {
+      jsonData: workoutData,
+    };
+  } catch (err: any) {
+    console.error("Error loading workouts:", err);
+    throw error(500, "Internal Server Error");
   }
-
-  // const groupBy = (array: Workout[], key: string): { [key: string]: Workout[] } => {
-  //   return array.reduce((result: { [key: string]: Workout[] }, currentValue: Workout) => {
-  //     (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
-  //     return result;
-  //   }, {});
-  // };
-
-  const groupBy = (array: Workout[], key: string): { key: string, values: Workout[] }[] => {
-    const grouped = array.reduce((result: { [key: string]: Workout[] }, currentValue: Workout) => {
-      (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
-      return result;
-    }, {});
-
-    return Object.entries(grouped).map(([key, values]) => ({ key, values }));
-  };
-
-  return {
-    jsonData: jsonData, // Return data for page load
-    sessionData: groupBy(jsonData, 'start_time') // Return grouped data for session load
-  };
-}
+};

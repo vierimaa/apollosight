@@ -38,6 +38,7 @@ interface WorkoutSession {
   title: string;
   start_time: string;
   end_time: string;
+  duration_seconds: number | null;
   uuid: string;
   exercises: Exercise[];
 }
@@ -77,6 +78,7 @@ function groupWorkoutsBySession(workouts: WorkoutData[]): WorkoutSession[] {
         start_time: workout.start_time,
         end_time: workout.end_time,
         uuid: workout.uuid,
+        duration_seconds: workout.duration_seconds,
         exercises: [],
       });
     }
@@ -107,7 +109,7 @@ function groupWorkoutsBySession(workouts: WorkoutData[]): WorkoutSession[] {
   return Array.from(sessionMap.values());
 }
 
-const writeToJson = (data: any[], fileName: string): void => {
+const writeToJson = (data: any, fileName: string): void => {
   const json = JSON.stringify(data, null, 2);
   const outputPath = path.join(process.cwd(), "static", fileName);
   fs.writeFileSync(outputPath, json);
@@ -135,7 +137,7 @@ try {
 
   console.info("Transforming data...");
   writeToJson(transformedData, "workoutData.json");
-  writeToJson(groupedData, "sessionData.json");
+  writeToJson({ workouts: groupedData }, "sessionData.json");
   console.info("Data transformation complete.");
 } catch (error) {
   console.error("Error processing data:", error);
