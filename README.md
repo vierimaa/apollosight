@@ -2,6 +2,32 @@
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
+## Data Transformation
+
+The project includes a data transformation script that processes workout data from CSV to JSON format. The script is located in `scripts/transform-data.ts`.
+
+### What the script does:
+
+1. Reads workout data from `workouts.csv`
+2. Transforms the data:
+   - Converts dates to ISO 8601 format
+   - Calculates workout durations
+   - Generates UUIDs for each workout
+   - Groups workouts into sessions with exercises and sets
+3. Outputs two JSON files in the `static` directory:
+   - `workoutData.json`: Raw workout data
+   - `sessionData.json`: Grouped workout sessions
+
+### Running the script:
+
+```bash
+# Install dependencies
+npm install
+
+# Run the transformation script
+npm run transform-data
+```
+
 ## Creating a project
 
 If you're seeing this, you've probably already done this step. Congrats!
@@ -23,6 +49,9 @@ npm run dev
 
 # or start the server and open the app in a new browser tab
 npm run dev -- --open
+
+# Setup backend using json-server
+npx json-server --watch sessionData.json 
 ```
 
 ## Building

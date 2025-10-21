@@ -7,15 +7,15 @@
 
   let maxWeightCanvas: HTMLCanvasElement;
   let oneRepMaxCanvas: HTMLCanvasElement;
-  // let setVolumeCanvas: HTMLCanvasElement;
-  // let sessionVolumeCanvas: HTMLCanvasElement;
-  // let sessionRepsCanvas: HTMLCanvasElement;
+  let setVolumeCanvas: HTMLCanvasElement;
+  let sessionVolumeCanvas: HTMLCanvasElement;
+  let sessionRepsCanvas: HTMLCanvasElement;
 
   let maxWeightChart: Chart | undefined;
   let oneRepMaxChart: Chart | undefined;
-  // let setVolumeChart: Chart;
-  // let sessionVolumeChart: Chart;
-  // let sessionRepsChart: Chart;
+  let setVolumeChart: Chart;
+  let sessionVolumeChart: Chart;
+  let sessionRepsChart: Chart;
 
   interface SetEntry {
     set_index: number;
@@ -23,42 +23,84 @@
     reps: number;
   }
 
+  // --- Time Range Filter ---
+  let timeRange = $state<"4w" | "3m" | "6m" | "9m" | "all">("all");
+
+  function filterByTimeRange(history: any) {
+    if (timeRange === "all") return history;
+    const now = new Date();
+    let cutoff: Date;
+    if (timeRange === "4w") {
+      cutoff = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
+    } else if (timeRange === "3m") {
+      cutoff = new Date(now);
+      cutoff.setMonth(now.getMonth() - 3);
+    } else if (timeRange === "6m") {
+      cutoff = new Date(now);
+      cutoff.setMonth(now.getMonth() - 6);
+    } else if (timeRange === "9m") {
+      cutoff = new Date(now);
+      cutoff.setMonth(now.getMonth() - 9);
+    } else {
+      return history; // Should not happen, but just in case
+    }
+    return history.filter(
+      (entry: any) => new Date(entry.workout_date) >= cutoff
+    );
+  }
+
+  const filteredHistory = $derived(() => filterByTimeRange(exerciseHistory));
+
   // Sort history by date ascending
-  const sortedHistory = [...data.exerciseHistory].sort(
-    (a, b) =>
-      new Date(a.workout_date).getTime() - new Date(b.workout_date).getTime()
+  const sortedHistory = $derived(() =>
+    [...filteredHistory()].sort(
+      (a, b) =>
+        new Date(a.workout_date).getTime() - new Date(b.workout_date).getTime()
+    )
   );
 
   // Prepare chart data
-  const labels = sortedHistory.map(
-    (entry) => new Date(entry.workout_date).toLocaleDateString() // or use formatDate if it returns just the date
+  const labels = $derived(() =>
+    sortedHistory().map((entry) =>
+      new Date(entry.workout_date).toLocaleDateString()
+    )
   );
 
-  const maxWeights = sortedHistory.map((entry) =>
-    Math.max(...entry.sets.map((set: SetEntry) => set.weight_kg))
+  const maxWeights = $derived(() =>
+    sortedHistory().map((entry) =>
+      Math.max(...entry.sets.map((set: SetEntry) => set.weight_kg))
+    )
   );
 
-  const oneRepMax = sortedHistory.map((entry) =>
-    Math.max(
-      ...entry.sets.map(
-        (set: SetEntry) => set.weight_kg * (1 + 0.0333 * set.reps)
+  const oneRepMax = $derived(() =>
+    sortedHistory().map((entry) =>
+      Math.max(
+        ...entry.sets.map(
+          (set: SetEntry) => set.weight_kg * (1 + 0.0333 * set.reps)
+        )
       )
     )
   );
 
-  const setVolume = sortedHistory.map((entry) =>
-    Math.max(...entry.sets.map((set: SetEntry) => set.weight_kg * set.reps))
-  );
-
-  const sessionVolume = sortedHistory.map((entry) =>
-    entry.sets.reduce(
-      (total: number, set: SetEntry) => total + set.weight_kg * set.reps,
-      0
+  const setVolume = $derived(() =>
+    sortedHistory().map((entry) =>
+      Math.max(...entry.sets.map((set: SetEntry) => set.weight_kg * set.reps))
     )
   );
 
-  const sessionReps = sortedHistory.map((entry) =>
-    entry.sets.reduce((total: number, set: SetEntry) => total + set.reps, 0)
+  const sessionVolume = $derived(() =>
+    sortedHistory().map((entry) =>
+      entry.sets.reduce(
+        (total: number, set: SetEntry) => total + set.weight_kg * set.reps,
+        0
+      )
+    )
+  );
+
+  const sessionReps = $derived(() =>
+    sortedHistory().map((entry) =>
+      entry.sets.reduce((total: number, set: SetEntry) => total + set.reps, 0)
+    )
   );
 
   const chartDefinitions = [
@@ -70,7 +112,7 @@
         return maxWeightChart;
       },
       label: "Max Weight (kg)",
-      data: maxWeights,
+      data: () => maxWeights(),
       borderColor: "#1976d2",
       backgroundColor: "rgba(25, 118, 210, 0.2)",
     },
@@ -82,9 +124,45 @@
         return oneRepMaxChart;
       },
       label: "One Rep Max (kg)",
-      data: oneRepMax,
+      data: () => oneRepMax(),
       borderColor: "#4caf50",
       backgroundColor: "rgba(76, 175, 80, 0.2)",
+    },
+    {
+      id: "setVolume",
+      canvasRef: () => setVolumeCanvas,
+      instanceRef: (chart?: Chart) => {
+        if (chart !== undefined) setVolumeChart = chart;
+        return setVolumeChart;
+      },
+      label: "Set Volume (kg*reps)",
+      data: () => setVolume(),
+      borderColor: "#ff9800",
+      backgroundColor: "rgba(255, 152, 0, 0.2)",
+    },
+    {
+      id: "sessionVolume",
+      canvasRef: () => sessionVolumeCanvas,
+      instanceRef: (chart?: Chart) => {
+        if (chart !== undefined) sessionVolumeChart = chart;
+        return sessionVolumeChart;
+      },
+      label: "Session Volume (kg*reps)",
+      data: () => sessionVolume(),
+      borderColor: "#9c27b0",
+      backgroundColor: "rgba(156, 39, 176, 0.2)",
+    },
+    {
+      id: "sessionReps",
+      canvasRef: () => sessionRepsCanvas,
+      instanceRef: (chart?: Chart) => {
+        if (chart !== undefined) sessionRepsChart = chart;
+        return sessionRepsChart;
+      },
+      label: "Session Reps",
+      data: () => sessionReps(),
+      borderColor: "#f44336",
+      backgroundColor: "rgba(244, 67, 54, 0.2)",
     },
   ];
 
@@ -110,7 +188,7 @@
     return new Chart(canvas, {
       type: "line",
       data: {
-        labels,
+        labels: labels(),
         datasets: [
           {
             label,
@@ -137,11 +215,7 @@
   }
 
   let activeChart = $state<
-    "maxWeight"
-    | "oneRepMax"
-    | "setVolume"
-    | "sessionVolume"
-    | "sessionReps"
+    "maxWeight" | "oneRepMax" | "setVolume" | "sessionVolume" | "sessionReps"
   >("maxWeight");
 
   function renderActiveChart() {
@@ -163,7 +237,7 @@
       const chart = createChart({
         canvas,
         label: activeDef.label,
-        data: activeDef.data,
+        data: activeDef.data(),
         borderColor: activeDef.borderColor,
         backgroundColor: activeDef.backgroundColor,
       });
@@ -172,6 +246,10 @@
     } catch (err) {
       console.error("renderActiveChart failed:", err);
     }
+  }
+
+  function prettifyExerciseName(slug: string) {
+    return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   $effect(() => {
@@ -185,52 +263,115 @@
   - Add date filter 4 weeks, 3 months, 1 year, all time
     - Filter adjusts graph data and table or just graph data?
 -->
-
-<h1>Exercise: {exerciseName.replace(/-/g, " ")}</h1>
-<div class="chart-buttons">
-  <button onclick={() => (activeChart = "maxWeight")}>Max Weight</button>
-  <button onclick={() => (activeChart = "oneRepMax")}>1RM</button>
-  <!-- You can enable these later as you implement them -->
-  <button onclick={() => (activeChart = "setVolume")}>Set Volume</button>
-  <button onclick={() => (activeChart = "sessionVolume")}
-    >Session Volume</button
-  >
-  <button onclick={() => (activeChart = "sessionReps")}>Session Reps</button>
-</div>
-<div class="charts-wrapper">
-  <div class="chart-container" style="display: {activeChart === 'maxWeight' ? 'block' : 'none'}">
-    <canvas bind:this={maxWeightCanvas}></canvas>
+<div class="center-content">
+  <h1>Exercise: {prettifyExerciseName(exerciseName)}</h1>
+  <div class="chart-buttons">
+    <button onclick={() => (activeChart = "maxWeight")}>Max Weight</button>
+    <button onclick={() => (activeChart = "oneRepMax")}>1RM</button>
+    <!-- You can enable these later as you implement them -->
+    <button onclick={() => (activeChart = "setVolume")}>Set Volume</button>
+    <button onclick={() => (activeChart = "sessionVolume")}>Session Volume</button
+    >
+    <button onclick={() => (activeChart = "sessionReps")}>Session Reps</button>
   </div>
-  <div class="chart-container" style="display: {activeChart === 'oneRepMax' ? 'block' : 'none'}">
-    <canvas bind:this={oneRepMaxCanvas}></canvas>
+  <div class="charts-wrapper">
+    <div
+      class="chart-container"
+      style="display: {activeChart === 'maxWeight' ? 'block' : 'none'}"
+    >
+      <canvas bind:this={maxWeightCanvas}></canvas>
+    </div>
+    <div
+      class="chart-container"
+      style="display: {activeChart === 'oneRepMax' ? 'block' : 'none'}"
+    >
+      <canvas bind:this={oneRepMaxCanvas}></canvas>
+    </div>
+    <div
+      class="chart-container"
+      style="display: {activeChart === 'setVolume' ? 'block' : 'none'}"
+    >
+      <canvas bind:this={setVolumeCanvas}></canvas>
+    </div>
+    <div
+      class="chart-container"
+      style="display: {activeChart === 'sessionVolume' ? 'block' : 'none'}"
+    >
+      <canvas bind:this={sessionVolumeCanvas}></canvas>
+    </div>
+    <div
+      class="chart-container"
+      style="display: {activeChart === 'sessionReps' ? 'block' : 'none'}"
+    >
+      <canvas bind:this={sessionRepsCanvas}></canvas>
+    </div>
   </div>
-</div>
 
-{#each exerciseHistory as entry}
-  <h2>Date: {formatDate(entry.workout_date)}</h2>
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Set</th>
-          <th>Weight (kg)</th>
-          <th>Reps</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each entry.sets as set}
+  <div class="time-range-buttons">
+    <button onclick={() => (timeRange = "4w")} class:active={timeRange === "4w"}
+      >4 weeks</button
+    >
+    <button onclick={() => (timeRange = "3m")} class:active={timeRange === "3m"}
+      >3 months</button
+    >
+    <button onclick={() => (timeRange = "6m")} class:active={timeRange === "6m"}
+      >6 months</button
+    >
+    <button onclick={() => (timeRange = "9m")} class:active={timeRange === "9m"}
+      >9 months</button
+    >
+    <button onclick={() => (timeRange = "all")} class:active={timeRange === "all"}
+      >All time</button
+    >
+  </div>
+
+  {#each exerciseHistory as entry}
+    <h2>Date: {formatDate(entry.workout_date)}</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead>
           <tr>
-            <td>{+set.set_index + 1}</td>
-            <td>{set.weight_kg}</td>
-            <td>{set.reps}</td>
+            <th>Set</th>
+            <th>Weight (kg)</th>
+            <th>Reps</th>
           </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          {#each entry.sets as set}
+            <tr>
+              <td>{+set.set_index + 1}</td>
+              <td>{set.weight_kg}</td>
+              <td>{set.reps}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
 {/each}
+</div>
 
 <style>
+  .center-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .table-wrapper {
+    max-width: 500px;
+    width: 100%;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fafbfc;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
+  }
+
   h1 {
     margin-bottom: 1.5rem;
     font-size: 2rem;
@@ -266,27 +407,14 @@
 
   .chart-container {
     width: 100%;
-    height: 350px;
+    height: 500px;
     margin-bottom: 1rem;
+    margin-top: 1rem;
   }
 
   canvas {
     width: 100%;
     height: 100%;
-  }
-
-  .table-wrapper {
-    max-width: 420px;
-    margin-bottom: 2rem;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fafbfc;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
   }
 
   th,
