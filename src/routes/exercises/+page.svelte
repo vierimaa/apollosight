@@ -1,97 +1,75 @@
 <script lang="ts">
-  const { data } = $props();
+	import { PageHeader, SectionCard, EmptyState, StatCard } from '$lib';
+	import { Search, Dumbbell } from 'lucide-svelte';
 
-  // Helper to create a slug from the exercise title
-  function slugify(title: string) {
-    return title.replace(/\s+/g, "-").toLowerCase();
-  }
+	const { data } = $props();
 
-  let filter = $state("");
+	// Helper to create a slug from the exercise title
+	function slugify(title: string) {
+		return title.replace(/\s+/g, '-').toLowerCase();
+	}
 
-  const filteredExercises = $derived(() =>
-    data.exercises.filter((exercise) =>
-      exercise.toLowerCase().includes(filter.trim().toLowerCase())
-    )
-  );
+	let filter = $state('');
+
+	const filteredExercises = $derived(() =>
+		data.exercises.filter((exercise) =>
+			exercise.toLowerCase().includes(filter.trim().toLowerCase())
+		)
+	);
 </script>
 
-<div class="container">
-  <h1>All Exercises</h1>
-  <input
-    class="filter-box"
-    type="text"
-    placeholder="Filter exercises..."
-    value={filter}
-    oninput={(e) => {
-      console.log((e.currentTarget as HTMLInputElement).value);
-      filter = (e.currentTarget as HTMLInputElement).value;
-    }}
-  />
-  <ul class="exercise-list">
-    {#each filteredExercises() as exercise}
-      <li>
-        <a href={`/exercises/${slugify(exercise)}`}>{exercise}</a>
-      </li>
-    {/each}
-  </ul>
+<PageHeader title="Exercises">
+	{#snippet actions()}
+		<StatCard title="Total" value={data.exercises.length} class="!p-3 !shadow-none">
+			{#snippet icon()}
+				<Dumbbell class="w-5 h-5" />
+			{/snippet}
+		</StatCard>
+	{/snippet}
+</PageHeader>
+
+<div class="p-6 space-y-6">
+	<SectionCard title="Exercise Library">
+		{#snippet headerAction()}
+			<div class="relative">
+				<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500-400" />
+				<input
+					type="text"
+					placeholder="Search exercises..."
+					value={filter}
+					oninput={(e) => {
+						filter = (e.currentTarget as HTMLInputElement).value;
+					}}
+					class="pl-10 pr-4 py-2 rounded-lg border border-surface-300-700 bg-surface-50-950 text-surface-950-50 
+						focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
+				/>
+			</div>
+		{/snippet}
+
+		{#snippet children()}
+			{#if filteredExercises().length === 0}
+				<EmptyState message="No exercises found matching your search.">
+					{#snippet icon()}
+						<Search class="w-12 h-12" />
+					{/snippet}
+				</EmptyState>
+			{:else}
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+					{#each filteredExercises() as exercise}
+						<a
+							href="/exercises/{slugify(exercise)}"
+							class="preset-filled-surface-200-800 rounded-lg p-4 hover:preset-tonal-primary transition-all
+								flex items-center gap-3 group"
+						>
+							<Dumbbell class="w-5 h-5 text-surface-600-400 group-hover:text-primary-500" />
+							<span class="font-medium text-surface-900-100 group-hover:text-primary-500">
+								{exercise}
+							</span>
+						</a>
+					{/each}
+				</div>
+			{/if}
+		{/snippet}
+	</SectionCard>
 </div>
 
-<style>
-  h1 {
-    margin-bottom: 1.5rem;
-    font-size: 2rem;
-    color: #2c3e50;
-  }
-
-  .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem;
-    min-height: 100vh; /* optional for vertical centering */
-  }
-
-  .exercise-list {
-    list-style: none;
-    padding: 0;
-    max-width: 400px;
-    margin: 0;
-  }
-
-  .exercise-list li {
-    margin-bottom: 0.75rem;
-    background: #f5f5f5;
-    border-radius: 6px;
-    transition: background 0.2s;
-    padding: 0.5rem 1rem;
-  }
-
-  .exercise-list li:hover {
-    background: #e0e7ef;
-  }
-
-  .exercise-list a {
-    text-decoration: none;
-    color: #1976d2;
-    font-weight: 500;
-    font-size: 1.1rem;
-    transition: color 0.2s;
-  }
-
-  .exercise-list a:hover {
-    color: #0d47a1;
-    text-decoration: underline;
-  }
-
-  .filter-box {
-    margin-bottom: 1rem;
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    width: 100%;
-    max-width: 400px;
-    box-sizing: border-box;
-    display: block;
-  }
-</style>

@@ -1,82 +1,101 @@
 <script lang="ts">
-  import { formatDate, formatDuration } from "$lib/utils/format";
-  let { data } = $props();
+	import { PageHeader, StatCard, SectionCard, DataTable, Badge } from '$lib';
+	import { formatDate, formatDuration } from '$lib/utils/format';
+	import { ArrowLeft, Calendar, Clock, Dumbbell } from 'lucide-svelte';
 
-  const { workout } = data;
+	let { data } = $props();
+	const workout = $derived(data.workout);
+
+	// Helper to slugify exercise name for linking
+	function slugify(text: string): string {
+		return text
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/(^-|-$)/g, '');
+	}
+
+	// Map set type to badge variant
+	function getBadgeVariant(setType: string): 'default' | 'error' | 'warning' {
+		if (setType === 'failure') return 'error';
+		if (setType === 'warmup') return 'warning';
+		return 'default';
+	}
 </script>
 
-<div class="center-content">
-  <h1>{workout.title}</h1>
-  <p><strong>Date:</strong> {formatDate(workout.start_time)}</p>
-  <p><strong>Duration:</strong> {formatDuration(workout.duration_seconds)}</p>
+<PageHeader title={workout.title}>
+	{#snippet actions()}
+		<a href="/workouts" class="flex items-center gap-2 text-surface-600-400 hover:text-surface-900-100">
+			<ArrowLeft class="w-4 h-4" />
+			<span class="text-sm">Back to Workouts</span>
+		</a>
+	{/snippet}
+</PageHeader>
 
-  <h2>Exercises</h2>
-  {#each workout.exercises as exercise}
-    <section style="margin-bottom: 2rem;">
-      <h3>{exercise.exercise_title}</h3>
-      {#if exercise.exercise_notes}
-        <p><em>Notes: {exercise.exercise_notes}</em></p>
-      {/if}
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Set</th>
-              <th>Type</th>
-              <th>Weight (kg)</th>
-              <th>Reps</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each exercise.sets as set}
-              <tr>
-                <td>{+set.set_index + 1}</td>
-                <td>{set.set_type}</td>
-                <td>{set.weight_kg}</td>
-                <td>{set.reps}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  {/each}
+<div class="p-6 space-y-6">
+	<!-- Workout Info Stats -->
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+		<StatCard title="Date" value={formatDate(workout.start_time).split(',')[0]} class="!p-4">
+			{#snippet icon()}
+				<Calendar class="w-6 h-6" />
+			{/snippet}
+		</StatCard>
 
+		<StatCard title="Duration" value={formatDuration(workout.duration_seconds)} class="!p-4">
+			{#snippet icon()}
+				<Clock class="w-6 h-6" />
+			{/snippet}
+		</StatCard>
+
+		<StatCard title="Exercises" value={workout.exercises.length} class="!p-4">
+			{#snippet icon()}
+				<Dumbbell class="w-6 h-6" />
+			{/snippet}
+		</StatCard>
+	</div>
+
+	<!-- Exercises -->
+	{#each workout.exercises as exercise}
+		<SectionCard title={exercise.exercise_title}>
+			{#snippet headerAction()}
+				<a
+					href="/exercises/{slugify(exercise.exercise_title)}"
+					class="text-sm text-primary-500 hover:underline"
+				>
+					View Progress
+				</a>
+			{/snippet}
+
+			{#snippet children()}
+				{#if exercise.exercise_notes}
+					<p class="text-sm text-surface-600-400 mb-4 italic">
+						Note: {exercise.exercise_notes}
+					</p>
+				{/if}
+
+				<DataTable>
+					<thead>
+						<tr>
+							<th>Set</th>
+							<th>Type</th>
+							<th>Weight (kg)</th>
+							<th>Reps</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each exercise.sets as set}
+							<tr>
+								<td>{+set.set_index + 1}</td>
+								<td>
+									<Badge label={set.set_type} variant={getBadgeVariant(set.set_type)} />
+								</td>
+								<td>{set.weight_kg}</td>
+								<td>{set.reps}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</DataTable>
+			{/snippet}
+		</SectionCard>
+	{/each}
 </div>
 
-<style>
-  .center-content {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch; /* allow children to stretch full width */
-    max-width: 960px;      /* optional: limit overall content width */
-    margin: 0 auto;        /* center container itself horizontally */
-    padding: 1rem;
-  }
-
-  .table-wrapper {
-    /* max-width: 800px; */
-    margin-bottom: 2rem;
-    width: 100%;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fafbfc;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
-  }
-
-  th,
-  td {
-    border: 1px solid #ccc;
-    padding: 0.5rem;
-    text-align: center;
-  }
-
-  th {
-    background-color: #f5f5f5;
-  }
-</style>
