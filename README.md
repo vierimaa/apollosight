@@ -14,8 +14,7 @@ The project includes a data transformation script that processes workout data fr
    - Calculates workout durations
    - Generates UUIDs for each workout
    - Groups workouts into sessions with exercises and sets
-3. Outputs two JSON files in the `static` directory:
-   - `workoutData.json`: Raw workout data
+3. Outputs one JSON file in the `static` directory:
    - `sessionData.json`: Grouped workout sessions
 
 ### Running the script:
@@ -25,7 +24,7 @@ The project includes a data transformation script that processes workout data fr
 npm install
 
 # Run the transformation script
-npm run transform-data
+npm run transform
 ```
 
 ## Creating a project
@@ -51,7 +50,7 @@ npm run dev
 npm run dev -- --open
 
 # Setup backend using json-server
-npx json-server --watch sessionData.json 
+npx json-server --watch sessionData.json --port 3000
 ```
 
 ## Building

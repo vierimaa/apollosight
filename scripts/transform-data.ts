@@ -111,7 +111,7 @@ function groupWorkoutsBySession(workouts: WorkoutData[]): WorkoutSession[] {
 
 const writeToJson = (data: any, fileName: string): void => {
   const json = JSON.stringify(data, null, 2);
-  const outputPath = path.join(process.cwd(), "static", fileName);
+  const outputPath = path.join(process.cwd(), fileName);
   fs.writeFileSync(outputPath, json);
 };
 
@@ -136,7 +136,6 @@ try {
   const groupedData = groupWorkoutsBySession(transformedData);
 
   console.info("Transforming data...");
-  writeToJson(transformedData, "workoutData.json");
   writeToJson({ workouts: groupedData }, "sessionData.json");
   console.info("Data transformation complete.");
 } catch (error) {
