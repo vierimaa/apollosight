@@ -18,7 +18,7 @@
 	</div>
 {:else if type === 'table'}
 	<div class="{className}">
-		{#each Array(lines) as _, i}
+		{#each Array(lines) as _}
 			<div class="flex gap-4 py-3 border-t border-surface-200-800">
 				<div class="placeholder animate-pulse h-4 w-1/4"></div>
 				<div class="placeholder animate-pulse h-4 w-1/3"></div>
@@ -28,8 +28,8 @@
 	</div>
 {:else}
 	<div class="space-y-3 {className}">
-		{#each Array(lines) as _, i}
-			<div class="placeholder animate-pulse h-4 w-full" style="width: {100 - i * 15}%"></div>
+		{#each Array(lines) as _, lineIndex}
+			<div class="placeholder animate-pulse h-4 w-full" style="width: {100 - lineIndex * 15}%"></div>
 		{/each}
 	</div>
 {/if}

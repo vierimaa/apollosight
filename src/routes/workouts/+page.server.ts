@@ -1,15 +1,13 @@
-import { error } from "@sveltejs/kit";
+import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
+import { API_BASE } from "$lib/api";
 
 export const load: PageServerLoad = async () => {
   try {
-    const response = await fetch("http://localhost:3000/workouts");
+    const response = await fetch(`${API_BASE}/workouts`);
 
     if (!response.ok) {
-      throw error(
-        response.status,
-        `Failed to fetch workouts: ${response.statusText}`
-      );
+      throw error(response.status, `Failed to fetch workouts: ${response.statusText}`);
     }
 
     const workoutData = await response.json();
@@ -18,10 +16,9 @@ export const load: PageServerLoad = async () => {
       throw error(404, "No workouts found");
     }
 
-    return {
-      jsonData: workoutData,
-    };
-  } catch (err: any) {
+    return { jsonData: workoutData };
+  } catch (err) {
+    if (isHttpError(err)) throw err;
     console.error("Error loading workouts:", err);
     throw error(500, "Internal Server Error");
   }

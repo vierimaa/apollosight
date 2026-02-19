@@ -1,12 +1,15 @@
-export function formatDate(iso: string, locale = "fi-FI") {
-  return new Date(iso).toLocaleString(locale, {
+export const formatDate = (iso: string, locale = "fi-FI"): string =>
+  new Date(iso).toLocaleString(locale, {
     dateStyle: "long",
     timeStyle: "short",
   });
-}
 
-export function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m}min`;
-}
+export const formatDuration = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${minutes}min`;
+};
+
+/** Converts an exercise title to a URL slug. Must match the matching logic in [exercise]/+page.server.ts. */
+export const slugify = (title: string): string =>
+  title.replace(/\s+/g, "-").toLowerCase();

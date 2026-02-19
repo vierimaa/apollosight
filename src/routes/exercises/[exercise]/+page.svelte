@@ -1,23 +1,18 @@
 <script lang="ts">
-	import { PageHeader, SectionCard, DataTable, Badge, LineChart } from '$lib';
+	import { PageHeader, SectionCard, DataTable, LineChart } from '$lib';
+	import type { ExerciseHistoryEntry } from '$lib';
 	import { formatDate } from '$lib/utils/format';
 	import { Tabs } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowLeft } from 'lucide-svelte';
 
 	const { data } = $props();
-	const exerciseName = $derived(data.exerciseName);
-	const exerciseHistory = $derived(data.exerciseHistory);
-
-	interface SetEntry {
-		set_index: number;
-		weight_kg: number;
-		reps: number;
-	}
+	const exerciseTitle = $derived(data.exerciseTitle);
+	const exerciseHistory = $derived(data.exerciseHistory as ExerciseHistoryEntry[]);
 
 	// --- Time Range Filter ---
 	let timeRange = $state<'4w' | '3m' | '6m' | '9m' | 'all'>('all');
 
-	function filterByTimeRange(history: any) {
+	const filterByTimeRange = (history: ExerciseHistoryEntry[]): ExerciseHistoryEntry[] => {
 		if (timeRange === 'all') return history;
 		const now = new Date();
 		let cutoff: Date;
@@ -29,13 +24,12 @@
 		} else if (timeRange === '6m') {
 			cutoff = new Date(now);
 			cutoff.setMonth(now.getMonth() - 6);
-		} else if (timeRange === '9m') {
+		} else {
+			// '9m'
 			cutoff = new Date(now);
 			cutoff.setMonth(now.getMonth() - 9);
-		} else {
-			return history;
 		}
-		return history.filter((entry: any) => new Date(entry.workout_date) >= cutoff);
+		return history.filter((entry) => new Date(entry.workout_date) >= cutoff);
 	}
 
 	const filteredHistory = $derived(filterByTimeRange(exerciseHistory));
@@ -43,45 +37,45 @@
 	// Sort history by date ascending
 	const sortedHistory = $derived(
 		[...filteredHistory].sort(
-			(a: any, b: any) => new Date(a.workout_date).getTime() - new Date(b.workout_date).getTime()
+			(entryA, entryB) => new Date(entryA.workout_date).getTime() - new Date(entryB.workout_date).getTime()
 		)
 	);
 
 	// Prepare chart data
 	const labels = $derived(
-		sortedHistory.map((entry: any) => new Date(entry.workout_date).toLocaleDateString('fi-FI'))
+		sortedHistory.map((entry) => new Date(entry.workout_date).toLocaleDateString('fi-FI'))
 	);
 
 	const maxWeights = $derived(
-		sortedHistory.map((entry: any) => Math.max(...entry.sets.map((set: SetEntry) => set.weight_kg)))
+		sortedHistory.map((entry) => Math.max(...entry.sets.map((set) => set.weight_kg)))
 	);
 
 	const oneRepMax = $derived(
-		sortedHistory.map((entry: any) =>
+		sortedHistory.map((entry) =>
 			Math.max(
-				...entry.sets.map((set: SetEntry) => set.weight_kg * (1 + 0.0333 * set.reps))
+				...entry.sets.map((set) => set.weight_kg * (1 + 0.0333 * set.reps))
 			)
 		)
 	);
 
 	const setVolume = $derived(
-		sortedHistory.map((entry: any) =>
-			Math.max(...entry.sets.map((set: SetEntry) => set.weight_kg * set.reps))
+		sortedHistory.map((entry) =>
+			Math.max(...entry.sets.map((set) => set.weight_kg * set.reps))
 		)
 	);
 
 	const sessionVolume = $derived(
-		sortedHistory.map((entry: any) =>
+		sortedHistory.map((entry) =>
 			entry.sets.reduce(
-				(total: number, set: SetEntry) => total + set.weight_kg * set.reps,
+				(total, set) => total + set.weight_kg * set.reps,
 				0
 			)
 		)
 	);
 
 	const sessionReps = $derived(
-		sortedHistory.map((entry: any) =>
-			entry.sets.reduce((total: number, set: SetEntry) => total + set.reps, 0)
+		sortedHistory.map((entry) =>
+			entry.sets.reduce((total, set) => total + set.reps, 0)
 		)
 	);
 
@@ -125,10 +119,6 @@
 
 	let activeChartIndex = $state('0');
 
-	function prettifyExerciseName(slug: string) {
-		return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-	}
-
 	const timeRangeOptions = [
 		{ value: '4w' as const, label: '4 weeks' },
 		{ value: '3m' as const, label: '3 months' },
@@ -138,7 +128,7 @@
 	];
 </script>
 
-<PageHeader title={prettifyExerciseName(exerciseName)}>
+<PageHeader title={exerciseTitle}>
 	{#snippet actions()}
 		<a
 			href="/exercises"
@@ -171,11 +161,11 @@
 
 		{#snippet children()}
 			<!-- Chart Tabs -->
-			<Tabs value={activeChartIndex} onValueChange={(e) => (activeChartIndex = e.value)}>
-				<Tabs.List class="mb-6 flex-wrap gap-2">
-					{#each chartConfigs as config, i}
-						<Tabs.Trigger
-							value={String(i)}
+			<Tabs value={activeChartIndex} onValueChange={(event) => (activeChartIndex = event.value)}>
+				<Tabs.List class="mb-6 flex flex-wrap gap-2">
+				{#each chartConfigs as config, index}
+					<Tabs.Trigger
+						value={String(index)}
 							class="px-4 py-2 rounded-lg transition-colors data-[selected]:bg-primary-500 
 								data-[selected]:text-white bg-surface-200-800 text-surface-700-300"
 						>
@@ -184,8 +174,8 @@
 					{/each}
 				</Tabs.List>
 
-				{#each chartConfigs as config, i}
-					<Tabs.Content value={String(i)}>
+				{#each chartConfigs as config, index}
+					<Tabs.Content value={String(index)}>
 						<div class="h-[400px]">
 							<LineChart
 								labels={labels}
@@ -209,11 +199,16 @@
 	<SectionCard title="Workout History">
 		{#snippet children()}
 			<div class="space-y-4">
-				{#each [...filteredHistory].sort((a: any, b: any) => new Date(b.workout_date).getTime() - new Date(a.workout_date).getTime()) as entry}
+				{#each [...filteredHistory].sort((entryA, entryB) => new Date(entryB.workout_date).getTime() - new Date(entryA.workout_date).getTime()) as entry}
 					<div class="preset-filled-surface-200-800 rounded-lg p-4">
 						<h3 class="text-lg font-semibold text-surface-950-50 mb-3">
 							{formatDate(entry.workout_date)}
 						</h3>
+						{#if entry.exercise_notes}
+							<p class="text-sm text-surface-950-50 mb-3 italic">
+								{entry.exercise_notes}
+							</p>
+						{/if}
 						<DataTable>
 							<thead>
 								<tr>
@@ -221,6 +216,7 @@
 									<th>Weight (kg)</th>
 									<th>Reps</th>
 									<th>Volume</th>
+									<th>RPE</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -230,6 +226,7 @@
 										<td>{set.weight_kg}</td>
 										<td>{set.reps}</td>
 										<td class="text-surface-600-400">{set.weight_kg * set.reps}</td>
+										<td>{set.rpe != null ? set.rpe : '—'}</td>
 									</tr>
 								{/each}
 							</tbody>

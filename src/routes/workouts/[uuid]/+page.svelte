@@ -1,25 +1,17 @@
 <script lang="ts">
 	import { PageHeader, StatCard, SectionCard, DataTable, Badge } from '$lib';
-	import { formatDate, formatDuration } from '$lib/utils/format';
+	import { formatDate, formatDuration, slugify } from '$lib/utils/format';
 	import { ArrowLeft, Calendar, Clock, Dumbbell } from 'lucide-svelte';
 
 	let { data } = $props();
 	const workout = $derived(data.workout);
 
-	// Helper to slugify exercise name for linking
-	function slugify(text: string): string {
-		return text
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/(^-|-$)/g, '');
-	}
-
 	// Map set type to badge variant
-	function getBadgeVariant(setType: string): 'default' | 'error' | 'warning' {
+	const getBadgeVariant = (setType: string): 'default' | 'error' | 'warning' => {
 		if (setType === 'failure') return 'error';
 		if (setType === 'warmup') return 'warning';
 		return 'default';
-	}
+	};
 </script>
 
 <PageHeader title={workout.title}>
@@ -79,6 +71,7 @@
 							<th>Type</th>
 							<th>Weight (kg)</th>
 							<th>Reps</th>
+							<th>RPE</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -90,6 +83,7 @@
 								</td>
 								<td>{set.weight_kg}</td>
 								<td>{set.reps}</td>
+								<td>{set.rpe != null ? set.rpe : '—'}</td>
 							</tr>
 						{/each}
 					</tbody>

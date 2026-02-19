@@ -1,17 +1,10 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { PageHeader, StatCard, SectionCard, DataTable } from '$lib';
+	import type { WorkoutSession } from '$lib';
 	import { formatDate, formatDuration } from '$lib/utils/format';
 	import { Dumbbell, Clock, ListChecks } from 'lucide-svelte';
 
 	let { data } = $props();
-
-	interface WorkoutData {
-		uuid: string;
-		title: string;
-		start_time: string;
-		duration_seconds: number;
-		exercises?: any[];
-	}
 
 	// Get today's date and 14 days ago
 	const now = new Date();
@@ -20,7 +13,7 @@
 	// Filter workouts from the last 2 weeks
 	const recentWorkouts = $derived(
 		data.workoutData.filter(
-			(w: WorkoutData) => new Date(w.start_time) >= twoWeeksAgo
+			(workout: WorkoutSession) => new Date(workout.start_time) >= twoWeeksAgo
 		)
 	);
 
@@ -28,13 +21,13 @@
 	const totalWorkouts = $derived(recentWorkouts.length);
 	const totalDuration = $derived(
 		recentWorkouts.reduce(
-			(sum: number, w: WorkoutData) => sum + (w.duration_seconds || 0),
+			(sum: number, workout: WorkoutSession) => sum + (workout.duration_seconds ?? 0),
 			0
 		)
 	);
 	const totalExercises = $derived(
 		recentWorkouts.reduce(
-			(sum: number, w: WorkoutData) => sum + (w.exercises ? w.exercises.length : 0),
+			(sum: number, workout: WorkoutSession) => sum + workout.exercises.length,
 			0
 		)
 	);
@@ -42,7 +35,7 @@
 	// Get the 5 most recent workouts for display
 	const recentWorkoutsList = $derived(
 		[...data.workoutData]
-			.sort((a: WorkoutData, b: WorkoutData) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+			.sort((workoutA: WorkoutSession, workoutB: WorkoutSession) => new Date(workoutB.start_time).getTime() - new Date(workoutA.start_time).getTime())
 			.slice(0, 5)
 	);
 </script>

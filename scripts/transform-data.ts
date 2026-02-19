@@ -26,6 +26,7 @@ interface Set {
   set_type: string;
   weight_kg: number;
   reps: number;
+  rpe: number | null;
 }
 
 interface Exercise {
@@ -103,13 +104,14 @@ function groupWorkoutsBySession(workouts: WorkoutData[]): WorkoutSession[] {
       set_type: workout.set_type,
       weight_kg: Number(workout.weight_kg),
       reps: Number(workout.reps),
+      rpe: workout.rpe ? Number(workout.rpe) : null,
     });
   }
 
   return Array.from(sessionMap.values());
 }
 
-const writeToJson = (data: any, fileName: string): void => {
+const writeToJson = (data: unknown, fileName: string): void => {
   const json = JSON.stringify(data, null, 2);
   const outputPath = path.join(process.cwd(), fileName);
   fs.writeFileSync(outputPath, json);

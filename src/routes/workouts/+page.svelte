@@ -1,17 +1,10 @@
 <script lang="ts">
 	import { PageHeader, SectionCard, StatCard, DataTable } from '$lib';
+	import type { WorkoutSession } from '$lib';
 	import { formatDate, formatDuration } from '$lib/utils/format';
 	import { Activity } from 'lucide-svelte';
 
 	let { data } = $props();
-
-	interface Workout {
-		uuid: string;
-		title: string;
-		start_time: string;
-		duration_seconds: number;
-		exercises: any[];
-	}
 
 	interface CalendarDay {
 		date: string;
@@ -22,10 +15,10 @@
 	const getWorkoutCountsByDate = () => {
 		const counts = new Map<string, number>();
 
-		data.jsonData.forEach((workout: Workout) => {
+		for (const workout of data.jsonData as WorkoutSession[]) {
 			const date = new Date(workout.start_time).toISOString().split('T')[0];
 			counts.set(date, (counts.get(date) || 0) + 1);
-		});
+		}
 
 		return counts;
 	};
@@ -37,10 +30,10 @@
 		const days: CalendarDay[] = [];
 
 		// Get days for the last year
-		for (let i = 0; i < 371; i++) {
+		for (let dayOffset = 0; dayOffset < 371; dayOffset++) {
 			// 53 weeks * 7 days to ensure full weeks
 			const date = new Date(today);
-			date.setDate(date.getDate() - i);
+			date.setDate(date.getDate() - dayOffset);
 			const dateStr = date.toISOString().split('T')[0];
 			days.push({
 				date: dateStr,
@@ -54,9 +47,9 @@
 		if (dayOfWeek === -1) dayOfWeek = 6; // Convert Sunday from 0 to 6
 
 		// Add padding days at the start to align with Monday
-		for (let i = 0; i < dayOfWeek; i++) {
+		for (let paddingIndex = 0; paddingIndex < dayOfWeek; paddingIndex++) {
 			const paddingDate = new Date(firstDay);
-			paddingDate.setDate(paddingDate.getDate() - (i + 1));
+			paddingDate.setDate(paddingDate.getDate() - (paddingIndex + 1));
 			days.push({
 				date: paddingDate.toISOString().split('T')[0],
 				count: 0
@@ -68,15 +61,40 @@
 
 	const activityData = $derived(generateCalendarData());
 
+	interface MonthLabel {
+		name: string;
+		weekIndex: number;
+	}
+
+	// Compute month labels: first column where each new month starts
+	const monthLabels = $derived.by(() => {
+		const labels: MonthLabel[] = [];
+		let lastMonth = -1;
+		for (let dayIndex = 0; dayIndex < activityData.length; dayIndex++) {
+			const date = new Date(activityData[dayIndex].date);
+			const month = date.getMonth();
+			if (month !== lastMonth) {
+				lastMonth = month;
+				labels.push({
+					name: date.toLocaleString('default', { month: 'short' }),
+					weekIndex: Math.floor(dayIndex / 7)
+				});
+			}
+		}
+		return labels;
+	});
+
 	// Helper to get color based on workout count
 	const getBackgroundColor = (count: number) => {
-		return count > 0 ? '#40c463' : 'var(--color-surface-200)';
+		if (count === 0) return 'var(--color-surface-300)';
+		if (count === 1) return 'var(--color-primary-400)';
+		return 'var(--color-primary-500)';
 	};
 
 	// Sort workouts by date (newest first)
 	const sortedWorkouts = $derived(
-		[...data.jsonData].sort(
-			(a: Workout, b: Workout) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+		[...data.jsonData as WorkoutSession[]].sort(
+			(workoutA, workoutB) => new Date(workoutB.start_time).getTime() - new Date(workoutA.start_time).getTime()
 		)
 	);
 </script>
@@ -98,31 +116,19 @@
 			<div class="activity-calendar">
 				<div class="calendar-container">
 					<div class="weekdays">
-						<div>Mon</div>
-						<div>Wed</div>
-						<div>Fri</div>
-						<div>Sun</div>
+						<span style="grid-row: 1">Mon</span>
+						<span style="grid-row: 3">Wed</span>
+						<span style="grid-row: 5">Fri</span>
+						<span style="grid-row: 7">Sun</span>
 					</div>
 
 					<div class="contribution-graph">
-						<div class="months">
-							{#each activityData
-								.filter((_, i) => i % 7 === 0)
-								.filter((day, i) => {
-									const date = new Date(day.date);
-									const prevDate = i > 0 ? new Date(activityData[Math.max(0, i * 7 - 7)].date) : null;
-									return !prevDate || date.getMonth() !== prevDate.getMonth();
-								})
-								.map((day) => {
-									const date = new Date(day.date);
-									return {
-										name: date.toLocaleString('default', { month: 'short' }),
-										weekIndex: Math.floor(activityData.findIndex((d) => d.date === day.date) / 7)
-									};
-								}) as month}
-								<div class="month-label" style="grid-column-start: {month.weekIndex + 1}">
-									{month.name}
-								</div>
+						<!-- Month labels: absolutely positioned above the grid -->
+						<div class="months-row">
+							{#each monthLabels as label}
+								<span class="month-label" style="left: {label.weekIndex * 17}px">
+									{label.name}
+								</span>
 							{/each}
 						</div>
 
@@ -169,7 +175,7 @@
 									{workout.title}
 								</a>
 							</td>
-							<td>{formatDuration(workout.duration_seconds)}</td>
+							<td>{formatDuration(workout.duration_seconds ?? 0)}</td>
 							<td>{workout.exercises.length}</td>
 						</tr>
 					{/each}
@@ -195,34 +201,33 @@
 	}
 
 	.weekdays {
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		padding: 32px 4px 0 0;
+		display: grid;
+		grid-template-rows: repeat(7, 15px);
+		gap: 2px;
+		padding-top: 24px; /* matches .months-row height */
+		padding-right: 6px;
 		color: rgb(var(--color-surface-600) / 0.8);
 		text-align: end;
 		font-size: 0.7rem;
-		height: 119px;
+		align-items: center;
 	}
 
 	.contribution-graph {
 		flex: 1;
 	}
 
-	.months {
-		display: grid;
-		grid-template-columns: repeat(53, 15px);
-		gap: 2px;
-		padding-bottom: 4px;
-		justify-content: center;
+	.months-row {
+		position: relative;
+		height: 20px;
+		margin-bottom: 4px;
 	}
 
 	.month-label {
+		position: absolute;
+		bottom: 0;
 		color: rgb(var(--color-surface-600) / 0.8);
 		font-size: 0.7rem;
-		position: relative;
-		grid-column-end: span 4;
-		text-align: start;
+		white-space: nowrap;
 	}
 
 	.calendar-grid {

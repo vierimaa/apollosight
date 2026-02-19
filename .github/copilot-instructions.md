@@ -1,4 +1,4 @@
-# Gym View - AI Coding Agent Instructions
+﻿# Gym View - AI Coding Agent Instructions
 
 ## Project Overview
 SvelteKit workout analytics app using **Svelte 5 runes**, Chart.js, and json-server backend.
@@ -7,12 +7,12 @@ SvelteKit workout analytics app using **Svelte 5 runes**, Chart.js, and json-ser
 
 ### Data Pipeline (Read All Steps)
 1. **Source**: CSV workout data from Hevy app export (`scripts/workouts.csv`)
-2. **Transform**: `npm run transform` → `scripts/transform-data.ts`
+2. **Transform**: `npm run transform`  `scripts/transform-data.ts`
    - Groups CSV rows into workout sessions
    - Generates SHA-256 UUIDs from start_time
    - Outputs `sessionData.json` at project root
-3. **Backend**: `npm run backend` → json-server on port 3000
-4. **Frontend**: Fetches from `http://localhost:3000/workouts` in `+page.server.ts` files
+3. **Backend**: `npm run backend`  json-server on port 3000
+4. **Frontend**: Fetches from `API_BASE` (defined in `src/lib/api.ts`) in `+page.server.ts` files
 
 ### Development Workflow
 ```bash
@@ -28,24 +28,48 @@ npm run transform
 
 **Critical**: Backend must be running before frontend, or all pages will error.
 
+## Code Style
+
+- **Functions**: Always use arrow functions (`const fn = () => {}`). Never use `function` declarations.
+- **Variables**: Always use descriptive names. No single-character variables (no `a`, `b`, `i`, `e`, `w`, etc.).
+- **Loops**: Use `for...of` for iteration. Never use `.forEach()`.
+- **Nullish coalescing**: Prefer `?? 0` over `|| 0` for numeric fallbacks.
+- **Type imports**: Use `import type` for types to enable tree-shaking.
+
+```typescript
+//  Correct
+const formatDate = (iso: string): string => new Date(iso).toLocaleString('fi-FI');
+const sortedWorkouts = [...workouts].sort(
+  (workoutA, workoutB) => new Date(workoutB.start_time).getTime() - new Date(workoutA.start_time).getTime()
+);
+for (const workout of workouts) { ... }
+
+//  Wrong
+function formatDate(iso) { ... }
+workouts.forEach((w) => { ... });
+const total = w.duration_seconds || 0;
+```
+
 ## Svelte 5 Patterns (NOT Svelte 4!)
 
-### ✅ Use These Runes
+###  Use These Runes
 ```svelte
 <script lang="ts">
-  let { data } = $props();           // Props (NOT export let)
-  let timeRange = $state('all');     // State (NOT let/const)
-  
-  const filtered = $derived(         // Computed (NOT $:)
-    data.filter(w => new Date(w.start_time) >= cutoff)
+  let { data } = $props();              // Props (NOT export let)
+  let timeRange = $state('all');        // State (NOT let/const)
+
+  const filtered = $derived(           // Computed value (NOT $:)
+    data.filter(workout => new Date(workout.start_time) >= cutoff)
   );
 </script>
 ```
 
-### ❌ Don't Use
-- `export let` for props → Use `$props()`
-- `$:` for reactivity → Use `$derived`
-- Svelte stores (`writable`, `readable`) → Use `$state`
+###  Don't Use
+- `export let` for props  Use `$props()`
+- `$:` for reactivity  Use `$derived`
+- `$derived(() => fn())`  Use `$derived(fn())`  the former creates a function, not a value
+- Svelte stores (`writable`, `readable`)  Use `$state`
+- Destructuring `data` directly  Use `$derived` to keep reactivity: `const workout = $derived(data.workout)`
 
 ## Component Patterns
 
@@ -53,28 +77,63 @@ npm run transform
 ```typescript
 // Always import from $lib barrel export
 import { PageHeader, StatCard, SectionCard } from '$lib';
+import type { WorkoutSession, ExerciseHistoryEntry } from '$lib';
 // NOT: import PageHeader from '$lib/components/layout/PageHeader.svelte'
 ```
 
 ### Chart Lifecycle
 ```svelte
 <script lang="ts">
+  import { Chart, LineController, LineElement, PointElement,
+           LinearScale, CategoryScale, Filler, Tooltip, Legend, Title } from 'chart.js';
+  Chart.register(LineController, LineElement, PointElement,
+                 LinearScale, CategoryScale, Filler, Tooltip, Legend, Title);
+
   let canvas: HTMLCanvasElement;
   let chart: Chart | undefined;
-  
+
   $effect(() => {
-    // Create chart
-    if (canvas && !chart) createChart();
-    // Cleanup on unmount
-    return () => chart?.destroy();
+    const currentLabels = labels;
+    const currentDatasets = datasets;
+
+    if (canvas?.offsetWidth > 0) {
+      buildChart(currentLabels, currentDatasets);
+      return () => { chart?.destroy(); chart = undefined; };
+    }
+
+    // Hidden tab: wait for real dimensions
+    const observer = new ResizeObserver(() => {
+      if (canvas && canvas.offsetWidth > 0) {
+        buildChart(currentLabels, currentDatasets);
+        observer.disconnect();
+      }
+    });
+    if (canvas) observer.observe(canvas);
+    return () => { observer.disconnect(); chart?.destroy(); chart = undefined; };
   });
 </script>
 ```
 
-## Data Types & URL Encoding
+## Data Types
 
-### Core Types (Match transform-data.ts)
+All shared types live in `src/lib/types.ts` and are re-exported from `$lib`.
+
 ```typescript
+// src/lib/types.ts
+interface WorkoutSet {
+  set_index: number;
+  set_type: string;
+  weight_kg: number;
+  reps: number;
+  rpe: number | null;
+}
+
+interface Exercise {
+  exercise_title: string;
+  exercise_notes: string | null;
+  sets: WorkoutSet[];
+}
+
 interface WorkoutSession {
   uuid: string;           // SHA-256 hash of start_time
   title: string;
@@ -83,45 +142,87 @@ interface WorkoutSession {
   duration_seconds: number | null;
   exercises: Exercise[];
 }
+
+/** Exercise enriched with its parent workout's date. */
+interface ExerciseHistoryEntry extends Exercise {
+  workout_date: string;
+}
 ```
 
-### Exercise URL Encoding
-Exercise names are converted: `"Chest Press (Machine)"` → `"chest-press-(machine)"`
+**Never define these inline in components**  always import from `$lib`.
+
+## Exercise URL Encoding
+
+Exercise names are slugified using the shared `slugify()` utility from `$lib/utils/format.ts`:
+
 ```typescript
-// Encode: exercise.exercise_title.replace(/\s+/g, '-').toLowerCase()
-// Match in server: exercise_title.replace(/\s+/g, '-').toLowerCase() === params.exercise
+import { slugify } from '$lib/utils/format';
+// "Chest Press (Machine)"  "chest-press-(machine)"
+slugify(exercise.exercise_title);
 ```
+
+The server matches using the same algorithm:
+```typescript
+exercise.exercise_title.replace(/\s+/g, '-').toLowerCase() === params.exercise
+```
+
+**Never reimplement slugify inline**  always import the shared function.
 
 ## Server Load Functions
 
 Always follow this pattern in `+page.server.ts`:
+
 ```typescript
+import { error, isHttpError } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { API_BASE } from '$lib/api';
+
 export const load: PageServerLoad = async ({ params }) => {
   try {
-    const response = await fetch("http://localhost:3000/workouts");
+    const response = await fetch(`${API_BASE}/workouts`);
     if (!response.ok) throw error(response.status, response.statusText);
     const workouts = await response.json();
-    // Transform data...
+    // transform data...
     return { workouts };
   } catch (err) {
-    console.error("Error:", err);
-    throw error(500, "Internal Server Error");
+    if (isHttpError(err)) throw err; // re-throw SvelteKit errors (404 etc) unchanged
+    console.error('Error:', err);
+    throw error(500, 'Internal Server Error');
   }
 };
 ```
 
+**Key rules:**
+- Import `API_BASE` from `$lib/api.ts`  never hardcode `http://localhost:3000`
+- Always check `response.ok` before calling `.json()`
+- Always re-throw `isHttpError` errors so 404s are not swallowed as 500s
+- For loads without try/catch, still check `response.ok` and throw appropriately
+
 ## Time Range Filtering Pattern
+
 Standard across all exercise pages:
+
 ```typescript
 let timeRange = $state<'4w' | '3m' | '6m' | '9m' | 'all'>('all');
 
-function filterByTimeRange(history: any) {
+const filterByTimeRange = (history: ExerciseHistoryEntry[]): ExerciseHistoryEntry[] => {
   if (timeRange === 'all') return history;
-  const cutoff = timeRange === '4w' 
-    ? new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)
-    : /* calculate months */;
-  return history.filter(e => new Date(e.workout_date) >= cutoff);
-}
+  const now = new Date();
+  let cutoff: Date;
+  if (timeRange === '4w') {
+    cutoff = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
+  } else if (timeRange === '3m') {
+    cutoff = new Date(now); cutoff.setMonth(now.getMonth() - 3);
+  } else if (timeRange === '6m') {
+    cutoff = new Date(now); cutoff.setMonth(now.getMonth() - 6);
+  } else {
+    // '9m'
+    cutoff = new Date(now); cutoff.setMonth(now.getMonth() - 9);
+  }
+  return history.filter((entry) => new Date(entry.workout_date) >= cutoff);
+};
+
+const filteredHistory = $derived(filterByTimeRange(exerciseHistory));
 ```
 
 ## Styling & UI
@@ -134,27 +235,25 @@ function filterByTimeRange(history: any) {
 ## File Organization
 ```
 src/
-├── routes/               # SvelteKit routes
-│   ├── +page.svelte     # Client component
-│   ├── +page.server.ts  # Server data loading
-│   └── [param]/         # Dynamic routes
-├── lib/
-│   ├── components/      # Organized by type (cards/, charts/, layout/)
-│   ├── utils/           # format.ts (formatDate, formatDuration)
-│   └── index.ts         # Barrel exports
+ routes/               # SvelteKit routes
+    +page.svelte     # Client component
+    +page.server.ts  # Server data loading
+    [param]/         # Dynamic routes
+ lib/
+    components/      # Organized by type (cards/, charts/, layout/, data/, feedback/)
+    utils/           # format.ts (formatDate, formatDuration, slugify)
+    api.ts           # API_BASE constant (overridable via API_URL env var)
+    types.ts         # Shared TypeScript interfaces
+    index.ts         # Barrel exports (components + types)
 scripts/
-└── transform-data.ts    # CSV → JSON pipeline
+ transform-data.ts    # CSV  JSON pipeline
 ```
 
 ## Common Pitfalls
 
-1. **Port conflicts**: json-server MUST be on port 3000 (hardcoded in server loads)
-2. **UUID generation**: UUIDs are SHA-256 of start_time, not random - don't change this
-3. **Chart cleanup**: Always destroy Chart.js instances in $effect cleanup
-4. **Date filtering**: Clone arrays before sort: `[...data].sort()` to avoid mutations
-5. **Type imports**: Use `import type` for types to enable tree-shaking
-
-## Additional Context Files
-- `.github/copilot/overview.prompt` - Project overview
-- `.github/copilot/types.prompt` - Complete type definitions
-- `.github/copilot/routes.prompt` - Route structure and navigation
+1. **API URL**: Never hardcode `http://localhost:3000`  always import `API_BASE` from `$lib/api.ts`. Override the port via `API_URL` env var if needed.
+2. **UUID generation**: UUIDs are SHA-256 of start_time, not random  don't change this.
+3. **Chart cleanup**: Always destroy Chart.js instances and set `chart = undefined` in `$effect` cleanup. Use tree-shaken imports, not `chart.js/auto`.
+4. **Date filtering**: Clone arrays before sort: `[...data].sort()` to avoid mutations.
+5. **Slugify**: Always use the shared `slugify()` from `$lib/utils/format.ts`. Reimplementing it with different regex (e.g. `[^a-z0-9]+`) will produce different slugs and break links for exercises with parentheses.
+6. **`$derived` destructuring**: Don't destructure `data` directly  it captures only the initial value. Use `const workout = $derived(data.workout)`.

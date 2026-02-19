@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { AppBar } from '@skeletonlabs/skeleton-svelte';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -10,17 +9,13 @@
 	let { title, actions }: Props = $props();
 </script>
 
-<AppBar class="bg-surface-50-950 border-b border-surface-200-800">
-	<AppBar.Toolbar class="px-6 py-4">
-		<AppBar.Headline>
-			<h1 class="text-2xl font-bold text-surface-950-50">{title}</h1>
-		</AppBar.Headline>
+<div class="bg-surface-50-950 border-b border-surface-200-800">
+	<div class="px-6 py-4 flex items-center justify-between gap-6">
+		<h1 class="text-2xl font-bold text-surface-950-50">{title}</h1>
 		{#if actions}
-			<AppBar.Trail>
-				<div class="flex items-center gap-3">
-					{@render actions()}
-				</div>
-			</AppBar.Trail>
+			<div class="flex items-center gap-3">
+				{@render actions()}
+			</div>
 		{/if}
-	</AppBar.Toolbar>
-</AppBar>
+	</div>
+</div>

@@ -1,17 +1,20 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
+import { API_BASE } from "$lib/api";
 
 export const load: PageServerLoad = async ({ params }) => {
-  const response = await fetch(
-    `http://localhost:3000/workouts?uuid=${params.uuid}`
-  );
-  const jsonData = await response.json();
+  const response = await fetch(`${API_BASE}/workouts?uuid=${params.uuid}`);
 
-  const workout = jsonData[0];
-
-  if (workout) {
-    return { workout };
+  if (!response.ok) {
+    throw error(response.status, `Failed to fetch workout: ${response.statusText}`);
   }
 
-  throw error(404, "Not found");
+  const jsonData = await response.json();
+  const workout = jsonData[0];
+
+  if (!workout) {
+    throw error(404, "Not found");
+  }
+
+  return { workout };
 };

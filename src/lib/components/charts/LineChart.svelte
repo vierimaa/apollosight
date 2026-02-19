@@ -1,6 +1,19 @@
 <script lang="ts">
-	import Chart from 'chart.js/auto';
+	import {
+		Chart,
+		LineController,
+		LineElement,
+		PointElement,
+		LinearScale,
+		CategoryScale,
+		Filler,
+		Tooltip,
+		Legend,
+		Title
+	} from 'chart.js';
 	import type { ChartConfiguration } from 'chart.js';
+
+	Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip, Legend, Title);
 
 	interface Props {
 		labels: string[];
@@ -26,10 +39,9 @@
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | undefined;
 
-	function createChart() {
+	function buildChart(currentLabels: string[], currentDatasets: typeof datasets) {
 		if (!canvas) return;
 
-		// Destroy existing chart if any
 		if (chart) {
 			chart.destroy();
 		}
@@ -37,23 +49,24 @@
 		const config: ChartConfiguration = {
 			type: 'line',
 			data: {
-				labels,
-				datasets: datasets.map(ds => ({
+				labels: currentLabels,
+				datasets: currentDatasets.map(ds => ({
 					...ds,
 					tension: 0.2,
 					fill: true,
+					clip: false,
 					pointRadius: 4,
 					pointHoverRadius: 6
 				}))
 			},
 			options: {
 				responsive: true,
-				maintainAspectRatio: true,
+				maintainAspectRatio: false,
 				plugins: {
 					legend: {
 						display: true,
 						labels: {
-							color: 'rgb(156, 163, 175)' // text-surface-400
+							color: 'rgb(156, 163, 175)'
 						}
 					},
 					title: title
@@ -67,6 +80,7 @@
 				scales: {
 					y: {
 						beginAtZero: yAxisBeginAtZero,
+						grace: '10%',
 						ticks: {
 							color: 'rgb(156, 163, 175)'
 						},
@@ -89,21 +103,38 @@
 		chart = new Chart(canvas, config);
 	}
 
-	// Re-create chart when data changes
 	$effect(() => {
-		// Access reactive props to track dependencies
-		const _ = [labels, datasets];
-		createChart();
+		// Capture current values to pass into buildChart so it reads reactive props
+		const currentLabels = labels;
+		const currentDatasets = datasets;
 
-		// Cleanup on unmount
-		return () => {
-			if (chart) {
-				chart.destroy();
+		if (canvas?.offsetWidth > 0) {
+			// Canvas already has real dimensions — build immediately.
+			buildChart(currentLabels, currentDatasets);
+			return () => {
+				chart?.destroy();
+				chart = undefined;
+			};
+		}
+
+		// Canvas not yet visible (e.g. inside an inactive tab panel).
+		// Wait until it gets real dimensions before building.
+		const observer = new ResizeObserver(() => {
+			if (canvas && canvas.offsetWidth > 0) {
+				buildChart(currentLabels, currentDatasets);
+				observer.disconnect();
 			}
+		});
+		if (canvas) observer.observe(canvas);
+
+		return () => {
+			observer.disconnect();
+			chart?.destroy();
+			chart = undefined;
 		};
 	});
 </script>
 
-<div class="w-full {className}">
-	<canvas bind:this={canvas}></canvas>
+<div class="w-full h-full {className}">
+	<canvas bind:this={canvas} class="w-full h-full"></canvas>
 </div>
