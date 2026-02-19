@@ -20,4 +20,5 @@ export { default as LoadingSkeleton } from './components/feedback/LoadingSkeleto
 
 // Chart components
 export { default as LineChart } from './components/charts/LineChart.svelte';
+export { default as BarChart } from './components/charts/BarChart.svelte';
 

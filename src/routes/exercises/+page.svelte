@@ -6,7 +6,7 @@
 	const { data } = $props();
 
 	let filter = $state('');
-	let sortMode = $state<'alpha' | 'recent'>('alpha');
+	let sortMode = $state<'alpha' | 'recent'>('recent');
 
 	const sortedExercises = $derived(
 		sortMode === 'recent'

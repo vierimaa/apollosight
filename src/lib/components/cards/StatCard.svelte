@@ -5,6 +5,7 @@
 	interface Trend {
 		value: number;
 		direction: 'up' | 'down';
+		label?: string;
 	}
 
 	interface Props {
@@ -28,10 +29,10 @@
 				<div class="flex items-center gap-1 mt-2">
 					{#if trend.direction === 'up'}
 						<TrendingUp class="w-4 h-4 text-success-500" />
-						<span class="text-sm font-medium text-success-500">+{trend.value}%</span>
+						<span class="text-sm font-medium text-success-500">{trend.label ?? `+${trend.value}%`}</span>
 					{:else}
 						<TrendingDown class="w-4 h-4 text-error-500" />
-						<span class="text-sm font-medium text-error-500">-{trend.value}%</span>
+						<span class="text-sm font-medium text-error-500">{trend.label ?? `-${trend.value}%`}</span>
 					{/if}
 				</div>
 			{/if}
