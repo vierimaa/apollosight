@@ -1,88 +1,9 @@
 <script lang="ts">
-	import { PageHeader, SectionCard, StatCard, DataTable } from '$lib';
-	import type { WorkoutSession } from '$lib';
+	import { PageHeader, SectionCard, StatCard, DataTable, BarChart, LineChart } from '$lib';
 	import { formatDate, formatDuration } from '$lib/utils/format';
 	import { Activity } from 'lucide-svelte';
 
 	let { data } = $props();
-
-	interface CalendarDay {
-		date: string;
-		count: number;
-	}
-
-	// Group workouts by date for the heatmap
-	const getWorkoutCountsByDate = () => {
-		const counts = new Map<string, number>();
-
-		for (const workout of data.jsonData as WorkoutSession[]) {
-			const date = new Date(workout.start_time).toISOString().split('T')[0];
-			counts.set(date, (counts.get(date) || 0) + 1);
-		}
-
-		return counts;
-	};
-
-	// Generate calendar data for the last year
-	const generateCalendarData = () => {
-		const today = new Date();
-		const workoutCounts = getWorkoutCountsByDate();
-		const days: CalendarDay[] = [];
-
-		// Get days for the last year
-		for (let dayOffset = 0; dayOffset < 371; dayOffset++) {
-			// 53 weeks * 7 days to ensure full weeks
-			const date = new Date(today);
-			date.setDate(date.getDate() - dayOffset);
-			const dateStr = date.toISOString().split('T')[0];
-			days.push({
-				date: dateStr,
-				count: workoutCounts.get(dateStr) || 0
-			});
-		}
-
-		// Pad the beginning to align with the week (Monday = 1, Sunday = 0)
-		const firstDay = new Date(days[days.length - 1].date);
-		let dayOfWeek = firstDay.getDay() - 1;
-		if (dayOfWeek === -1) dayOfWeek = 6; // Convert Sunday from 0 to 6
-
-		// Add padding days at the start to align with Monday
-		for (let paddingIndex = 0; paddingIndex < dayOfWeek; paddingIndex++) {
-			const paddingDate = new Date(firstDay);
-			paddingDate.setDate(paddingDate.getDate() - (paddingIndex + 1));
-			days.push({
-				date: paddingDate.toISOString().split('T')[0],
-				count: 0
-			});
-		}
-
-		return days.reverse();
-	};
-
-	const activityData = $derived(generateCalendarData());
-
-	interface MonthLabel {
-		name: string;
-		weekIndex: number;
-	}
-
-	// Compute month labels: first column where each new month starts
-	const monthLabels = $derived.by(() => {
-		const labels: MonthLabel[] = [];
-		let lastMonth = -1;
-		for (let dayIndex = 0; dayIndex < activityData.length; dayIndex++) {
-			const date = new Date(activityData[dayIndex].date);
-			const month = date.getMonth();
-			if (month !== lastMonth) {
-				lastMonth = month;
-				labels.push({
-					name: date.toLocaleString('default', { month: 'short' }),
-					weekIndex: Math.floor(dayIndex / 7)
-				});
-			}
-		}
-		return labels;
-	});
 
 	// Helper to get color based on workout count
 	const getBackgroundColor = (count: number) => {
@@ -91,17 +12,44 @@
 		return 'var(--color-primary-500)';
 	};
 
-	// Sort workouts by date (newest first)
-	const sortedWorkouts = $derived(
-		[...data.jsonData as WorkoutSession[]].sort(
-			(workoutA, workoutB) => new Date(workoutB.start_time).getTime() - new Date(workoutA.start_time).getTime()
-		)
-	);
+	// ─── Time range filter ──────────────────────────────────────────────────────
+	type TimeRange = '3m' | '6m' | '1y' | 'all';
+	let timeRange = $state<TimeRange>('all');
+
+	const filterByTimeRange = (workouts: typeof data.workouts): typeof data.workouts => {
+		if (timeRange === 'all') return workouts;
+		const cutoff = new Date();
+		if (timeRange === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
+		else if (timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+		else cutoff.setFullYear(cutoff.getFullYear() - 1);
+		return workouts.filter((workout) => new Date(workout.start_time) >= cutoff);
+	};
+
+	const filteredWorkouts = $derived(filterByTimeRange(data.workouts));
+
+	// ─── Monthly charts (last 12 months, pre-computed server-side) ─────────────
+	const volumeDatasets = $derived([
+		{
+			label: 'Total volume (kg)',
+			data: data.monthlyChartData.volumeData,
+			backgroundColor: 'rgba(129, 140, 248, 0.75)',
+			borderColor: 'rgba(129, 140, 248, 1)'
+		}
+	]);
+
+	const durationDatasets = $derived([
+		{
+			label: 'Avg duration (min)',
+			data: data.monthlyChartData.avgDurationData,
+			borderColor: 'rgba(52, 211, 153, 1)',
+			backgroundColor: 'rgba(52, 211, 153, 0.1)'
+		}
+	]);
 </script>
 
 <PageHeader title="Workouts">
 	{#snippet actions()}
-		<StatCard title="Total" value={data.jsonData.length} class="!p-3 !shadow-none">
+		<StatCard title="Total" value={data.workouts.length} class="!p-3 !shadow-none">
 			{#snippet icon()}
 				<Activity class="w-5 h-5" />
 			{/snippet}
@@ -125,15 +73,13 @@
 					<div class="contribution-graph">
 						<!-- Month labels: absolutely positioned above the grid -->
 						<div class="months-row">
-							{#each monthLabels as label}
-								<span class="month-label" style="left: {label.weekIndex * 17}px">
-									{label.name}
-								</span>
+							{#each data.calendarMonthLabels as label (label.weekIndex)}
+								<span class="month-label" style="left: {label.weekIndex * 17}px">{label.name}</span>
 							{/each}
 						</div>
 
 						<div class="calendar-grid">
-							{#each activityData as day}
+							{#each data.calendarDays as day (day.date)}
 								<div
 									class="day"
 									style="background-color: {getBackgroundColor(day.count)}"
@@ -154,8 +100,46 @@
 		{/snippet}
 	</SectionCard>
 
+	<!-- Monthly Volume Chart -->
+	<SectionCard title="Monthly Volume">
+		{#snippet children()}
+			<div class="h-64">
+				<BarChart
+					labels={data.monthlyChartData.labels}
+					datasets={volumeDatasets}
+					title="Total kg lifted per month"
+				/>
+			</div>
+		{/snippet}
+	</SectionCard>
+
+	<!-- Avg Session Duration Chart -->
+	<SectionCard title="Avg Session Duration">
+		{#snippet children()}
+			<div class="h-64">
+				<LineChart
+					labels={data.monthlyChartData.labels}
+					datasets={durationDatasets}
+					title="Average session duration per month (min)"
+				/>
+			</div>
+		{/snippet}
+	</SectionCard>
+
 	<!-- Workout Sessions Table -->
 	<SectionCard title="All Sessions">
+		{#snippet headerAction()}
+			<div class="flex gap-1">
+				{#each (['3m', '6m', '1y', 'all'] as TimeRange[]) as range (range)}
+					<button
+						class="btn btn-sm {timeRange === range ? 'preset-filled' : 'preset-tonal'}"
+						onclick={() => (timeRange = range)}
+					>
+						{range === 'all' ? 'All' : range}
+					</button>
+				{/each}
+			</div>
+		{/snippet}
 		{#snippet children()}
 			<DataTable>
 				<thead>
@@ -164,10 +148,12 @@
 						<th>Title</th>
 						<th>Duration</th>
 						<th>Exercises</th>
+						<th>Sets</th>
+						<th>Volume</th>
 					</tr>
 				</thead>
 				<tbody>
-					{#each sortedWorkouts as workout}
+					{#each filteredWorkouts as workout (workout.uuid)}
 						<tr>
 							<td>{formatDate(workout.start_time)}</td>
 							<td>
@@ -176,7 +162,9 @@
 								</a>
 							</td>
 							<td>{formatDuration(workout.duration_seconds ?? 0)}</td>
-							<td>{workout.exercises.length}</td>
+							<td>{workout.exerciseCount}</td>
+							<td>{workout.totalSets}</td>
+							<td>{Math.round(workout.volume).toLocaleString('fi-FI')} kg</td>
 						</tr>
 					{/each}
 				</tbody>

@@ -19,7 +19,7 @@
 		labels: string[];
 		datasets: Array<{
 			label: string;
-			data: number[];
+			data: (number | null)[];
 			borderColor: string;
 			backgroundColor: string;
 		}>;
@@ -39,7 +39,7 @@
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | undefined;
 
-	function buildChart(currentLabels: string[], currentDatasets: typeof datasets) {
+	const buildChart = (currentLabels: string[], currentDatasets: typeof datasets) => {
 		if (!canvas) return;
 
 		if (chart) {
