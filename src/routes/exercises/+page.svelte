@@ -57,7 +57,7 @@
 							? 'bg-primary-500 text-white'
 							: 'bg-surface-200-800 text-surface-700-300 hover:bg-surface-300-700'}"
 					>
-						A–Z
+						A-Z
 					</button>
 					<button
 						onclick={() => (sortMode = 'recent')}

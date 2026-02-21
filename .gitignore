@@ -22,8 +22,10 @@ vite.config.ts.timestamp-*
 
 # Personal learnings (not committed to repo)
 learnings/
-
 TODO.txt
+
+# Testing
+/test-results
 
 # Local workout export data (do not commit)
 scripts/workouts.csv
