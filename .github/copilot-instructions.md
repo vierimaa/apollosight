@@ -1,4 +1,4 @@
-﻿# Gym View - AI Coding Agent Instructions
+﻿# ApolloSight - AI Coding Agent Instructions
 
 ## Project Overview
 SvelteKit workout analytics app using **Svelte 5 runes**, Chart.js, and json-server backend.

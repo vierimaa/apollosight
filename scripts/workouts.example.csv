@@ -1,0 +1,19 @@
+title,start_time,end_time,exercise_title,exercise_notes,set_index,set_type,weight_kg,reps,rpe
+Push Day,2026-02-10 10:00:00,2026-02-10 11:15:00,Bench Press (Barbell),,0,warmup,40,12,
+Push Day,2026-02-10 10:00:00,2026-02-10 11:15:00,Bench Press (Barbell),,1,normal,80,8,7
+Push Day,2026-02-10 10:00:00,2026-02-10 11:15:00,Bench Press (Barbell),,2,normal,85,6,8
+Push Day,2026-02-10 10:00:00,2026-02-10 11:15:00,Overhead Press (Barbell),,0,normal,50,8,
+Push Day,2026-02-10 10:00:00,2026-02-10 11:15:00,Overhead Press (Barbell),,1,normal,55,6,
+Push Day,2026-02-10 10:00:00,2026-02-10 11:15:00,Overhead Press (Barbell),,2,normal,55,5,
+Pull Day,2026-02-12 14:00:00,2026-02-12 15:20:00,Pull-Up,,0,normal,0,8,
+Pull Day,2026-02-12 14:00:00,2026-02-12 15:20:00,Pull-Up,,1,normal,0,7,
+Pull Day,2026-02-12 14:00:00,2026-02-12 15:20:00,Pull-Up,,2,normal,0,6,
+Pull Day,2026-02-12 14:00:00,2026-02-12 15:20:00,Barbell Row,Focus on scapular retraction,0,normal,60,8,7
+Pull Day,2026-02-12 14:00:00,2026-02-12 15:20:00,Barbell Row,Focus on scapular retraction,1,normal,70,6,8
+Pull Day,2026-02-12 14:00:00,2026-02-12 15:20:00,Barbell Row,Focus on scapular retraction,2,normal,70,5,9
+Leg Day,2026-02-14 16:00:00,2026-02-14 17:10:00,Squat (Barbell),,0,warmup,60,10,
+Leg Day,2026-02-14 16:00:00,2026-02-14 17:10:00,Squat (Barbell),,1,normal,100,6,8
+Leg Day,2026-02-14 16:00:00,2026-02-14 17:10:00,Squat (Barbell),,2,normal,105,5,9
+Leg Day,2026-02-14 16:00:00,2026-02-14 17:10:00,Romanian Deadlift,,0,normal,80,10,
+Leg Day,2026-02-14 16:00:00,2026-02-14 17:10:00,Romanian Deadlift,,1,normal,90,8,
+Leg Day,2026-02-14 16:00:00,2026-02-14 17:10:00,Romanian Deadlift,,2,normal,90,6,

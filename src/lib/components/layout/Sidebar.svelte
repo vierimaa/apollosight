@@ -24,7 +24,7 @@
 <aside class="flex flex-col h-screen w-64 bg-surface-100-900 border-r border-surface-300-700">
 	<!-- Logo/Brand -->
 	<div class="p-6 border-b border-surface-300-700">
-		<h1 class="text-2xl font-bold text-surface-950-50">Gym View</h1>
+		<h1 class="text-2xl font-bold text-surface-950-50">ApolloSight</h1>
 		<p class="text-sm text-surface-600-400">Fitness Dashboard</p>
 	</div>
 
