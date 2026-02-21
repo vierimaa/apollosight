@@ -11,5 +11,8 @@ export const formatDuration = (seconds: number): string => {
 };
 
 /** Converts an exercise title to a URL slug. Must match the matching logic in [exercise]/+page.server.ts. */
+export const formatVolume = (kg: number): string =>
+	`${kg.toLocaleString('fi-FI')} kg`;
+
 export const slugify = (title: string): string =>
   title.replace(/\s+/g, "-").toLowerCase();

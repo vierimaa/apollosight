@@ -27,3 +27,4 @@ TODO.txt
 
 # Local workout export data (do not commit)
 scripts/workouts.csv
+sessionData.json
