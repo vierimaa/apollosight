@@ -21,7 +21,8 @@ export interface WorkoutSession {
   exercises: Exercise[];
 }
 
-/** A single exercise entry enriched with the parent workout's date. */
+/** A single exercise entry enriched with the parent workout's date and UUID. */
 export interface ExerciseHistoryEntry extends Exercise {
   workout_date: string;
+  workout_uuid: string;
 }

@@ -14,6 +14,7 @@ export const load: PageServerLoad = async () => {
 
     // Collect all unique exercise titles with their most recent workout date
     const exerciseLastDate = new Map<string, string>();
+    const exerciseSessionCount = new Map<string, number>();
     for (const workout of workouts) {
       if (!workout.exercises) continue;
       for (const exercise of workout.exercises) {
@@ -22,11 +23,12 @@ export const load: PageServerLoad = async () => {
         if (!exerciseLastDate.has(title) || date > exerciseLastDate.get(title)!) {
           exerciseLastDate.set(title, date);
         }
+        exerciseSessionCount.set(title, (exerciseSessionCount.get(title) ?? 0) + 1);
       }
     }
 
     const exercises = Array.from(exerciseLastDate.entries())
-      .map(([title, lastDate]) => ({ title, lastDate }))
+      .map(([title, lastDate]) => ({ title, lastDate, sessionCount: exerciseSessionCount.get(title) ?? 0 }))
       .sort((exerciseA, exerciseB) => exerciseA.title.localeCompare(exerciseB.title));
 
     return { exercises };

@@ -10,7 +10,7 @@ export const formatDuration = (seconds: number): string => {
   return `${hours}h ${minutes}min`;
 };
 
-/** Converts an exercise title to a URL slug. Must match the matching logic in [exercise]/+page.server.ts. */
+/** Formats a volume number (kg) into a localized string with 'kg' suffix. */
 export const formatVolume = (kg: number): string =>
 	`${kg.toLocaleString('fi-FI')} kg`;
 

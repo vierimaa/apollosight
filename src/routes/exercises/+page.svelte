@@ -8,6 +8,17 @@
 	let filter = $state('');
 	let sortMode = $state<'alpha' | 'recent'>('recent');
 
+	const formatRelativeDate = (iso: string): string => {
+		const diffDays = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+		if (diffDays === 0) return 'Today';
+		if (diffDays === 1) return 'Yesterday';
+		if (diffDays < 7) return `${diffDays} days ago`;
+		if (diffDays < 14) return '1 week ago';
+		if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+		if (diffDays < 60) return '1 month ago';
+		return `${Math.floor(diffDays / 30)} months ago`;
+	};
+
 	const sortedExercises = $derived(
 		sortMode === 'recent'
 			? [...data.exercises].sort(
@@ -89,10 +100,20 @@
 							class="preset-filled-surface-200-800 rounded-lg p-4 hover:preset-tonal-primary transition-all
 								flex items-center gap-3 group"
 						>
-							<Dumbbell class="w-5 h-5 text-surface-600-400 group-hover:text-primary-500" />
-							<span class="font-medium text-surface-900-100 group-hover:text-primary-500">
-								{exercise.title}
-							</span>
+							<Dumbbell class="w-5 h-5 shrink-0 text-surface-600-400 group-hover:text-primary-500" />
+							<div class="flex-1 min-w-0">
+								<span class="font-medium text-surface-900-100 group-hover:text-primary-500 block truncate">
+									{exercise.title}
+								</span>
+								<div class="flex items-center gap-3 mt-1">
+									<span class="text-xs text-surface-500-400">
+										{exercise.sessionCount} session{exercise.sessionCount === 1 ? '' : 's'}
+									</span>
+									<span class="text-xs text-surface-500-400">
+										{formatRelativeDate(exercise.lastDate)}
+									</span>
+								</div>
+							</div>
 						</a>
 					{/each}
 				</div>

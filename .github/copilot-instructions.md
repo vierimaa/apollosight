@@ -143,9 +143,10 @@ interface WorkoutSession {
   exercises: Exercise[];
 }
 
-/** Exercise enriched with its parent workout's date. */
+/** Exercise enriched with its parent workout's date and UUID. */
 interface ExerciseHistoryEntry extends Exercise {
   workout_date: string;
+  workout_uuid: string;
 }
 ```
 
@@ -161,12 +162,13 @@ import { slugify } from '$lib/utils/format';
 slugify(exercise.exercise_title);
 ```
 
-The server matches using the same algorithm:
+The server also imports and uses the same function:
 ```typescript
-exercise.exercise_title.replace(/\s+/g, '-').toLowerCase() === params.exercise
+import { slugify } from '$lib/utils/format';
+if (slugify(exercise.exercise_title) === params.exercise) { ... }
 ```
 
-**Never reimplement slugify inline**  always import the shared function.
+**Never reimplement slugify inline**  always import the shared function. An inline reimplementation with different regex will silently break links for exercises with parentheses or special characters.
 
 ## Server Load Functions
 
@@ -198,9 +200,57 @@ export const load: PageServerLoad = async ({ params }) => {
 - Always re-throw `isHttpError` errors so 404s are not swallowed as 500s
 - For loads without try/catch, still check `response.ok` and throw appropriately
 
+## Server vs Client Responsibility
+
+**The golden rule: `+page.server.ts` owns logic, `+page.svelte` owns presentation.**
+
+### What belongs in `+page.server.ts`
+- All data fetching and HTTP error handling
+- Data transformation, aggregation, and pre-computation (totals, bests, counts, derived metrics)
+- Pre-sorting data so the client never needs to sort on every render
+- Any calculation that does not depend on runtime UI state (user input, selected filters, toggle values)
+
+```typescript
+// ✅ Correct — compute on server, return ready-to-use values
+const totalSessions = exerciseHistory.length;
+const bestWeight = exerciseHistory.reduce((best, entry) => {
+  return Math.max(best, ...entry.sets.map((set) => set.weight_kg));
+}, 0);
+exerciseHistory.sort(
+  (entryA, entryB) => new Date(entryA.workout_date).getTime() - new Date(entryB.workout_date).getTime()
+);
+return { exerciseHistory, totalSessions, bestWeight };
+```
+
+### What belongs in `+page.svelte`
+- Reactive UI state (`$state`): selected tab, filter value, sort toggle, time range
+- Derived values that depend on that UI state (`$derived`): filtered/sliced subsets of server data
+- Rendering and layout only — no business logic that could have been computed once on the server
+
+```svelte
+<!-- ✅ Correct — client only reacts to user-driven state -->
+let timeRange = $state('all');
+const filteredHistory = $derived(filterByTimeRange(data.exerciseHistory));
+
+<!-- ❌ Wrong — aggregating over full dataset on every render -->
+const totalVolume = $derived(
+  data.exerciseHistory.reduce((t, e) => t + e.sets.reduce(...), 0)
+);
+```
+
+### Array mutations
+When the server pre-sorts data, the client should use **`.toReversed()`** (returns a new array, no mutation) instead of `[...arr].sort(...)` for display-order reversal:
+```typescript
+// ✅ Preferred
+filteredHistory.toReversed()
+
+// ❌ Unnecessary spread + sort when server already sorted
+[...filteredHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+```
+
 ## Time Range Filtering Pattern
 
-Standard across all exercise pages:
+Standard across all exercise pages — time range filtering stays on the client because it reacts to UI state:
 
 ```typescript
 let timeRange = $state<'4w' | '3m' | '6m' | '9m' | 'all'>('all');
@@ -254,6 +304,6 @@ scripts/
 1. **API URL**: Never hardcode `http://localhost:3000`  always import `API_BASE` from `$lib/api.ts`. Override the port via `API_URL` env var if needed.
 2. **UUID generation**: UUIDs are SHA-256 of start_time, not random  don't change this.
 3. **Chart cleanup**: Always destroy Chart.js instances and set `chart = undefined` in `$effect` cleanup. Use tree-shaken imports, not `chart.js/auto`.
-4. **Date filtering**: Clone arrays before sort: `[...data].sort()` to avoid mutations.
+4. **Array mutations**: Use `.toReversed()` / `.toSorted()` instead of `[...data].sort()` — both return a new array without mutating the original. Only clone manually (`[...data]`) when older browser targets require it.
 5. **Slugify**: Always use the shared `slugify()` from `$lib/utils/format.ts`. Reimplementing it with different regex (e.g. `[^a-z0-9]+`) will produce different slugs and break links for exercises with parentheses.
 6. **`$derived` destructuring**: Don't destructure `data` directly  it captures only the initial value. Use `const workout = $derived(data.workout)`.
