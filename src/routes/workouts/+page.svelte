@@ -73,7 +73,7 @@
 					<div class="contribution-graph">
 						<!-- Month labels: absolutely positioned above the grid -->
 						<div class="months-row">
-							{#each data.calendarMonthLabels as label (label.weekIndex)}
+							{#each data.calendarMonthLabels as label (`${label.name}-${label.weekIndex}`)}
 								<span class="month-label" style="left: {label.weekIndex * 17}px">{label.name}</span>
 							{/each}
 						</div>

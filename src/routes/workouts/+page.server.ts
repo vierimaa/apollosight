@@ -143,15 +143,21 @@ const computeCalendarData = (
   // Compute month label positions from the ordered day array
   const calendarMonthLabels: CalendarMonthLabel[] = [];
   let lastMonth = -1;
+  let lastWeekIndex = -1;
   for (let dayIndex = 0; dayIndex < calendarDays.length; dayIndex++) {
     const date = new Date(calendarDays[dayIndex].date);
     const month = date.getMonth();
-    if (month !== lastMonth) {
+    const weekIndex = Math.floor(dayIndex / 7);
+    if (month !== lastMonth && weekIndex !== lastWeekIndex) {
       lastMonth = month;
+      lastWeekIndex = weekIndex;
       calendarMonthLabels.push({
         name: date.toLocaleString('default', { month: 'short' }),
-        weekIndex: Math.floor(dayIndex / 7)
+        weekIndex
       });
+    } else if (month !== lastMonth) {
+      // New month started in same week as previous label — just update tracking
+      lastMonth = month;
     }
   }
 
