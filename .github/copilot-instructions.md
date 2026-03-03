@@ -173,3 +173,53 @@ const totalVolume = $derived(
   data.exerciseHistory.reduce((t, e) => t + e.sets.reduce(...), 0)
 );
 ```
+
+## E2E Testing (Playwright)
+
+### Svelte 5 `oninput` + `$derived` filter limitation
+
+Playwright cannot reliably trigger Svelte 5's `oninput` handler via `fill()` or `pressSequentially()` in the test environment. This means live-search/filter inputs driven by `$state` + `$derived` **cannot be tested end-to-end** by asserting that the rendered list changes.
+
+**Do not write tests like this** — they will fail even though the feature works in the browser:
+
+```typescript
+// ❌ Wrong — fill() does not reliably fire oninput in Playwright + Svelte 5
+await page.getByPlaceholder('Search...').fill('zzzznotaprogram');
+await expect(page.locator('a[href^="/programs/"]')).toHaveCount(0);
+```
+
+**Instead, test that the input exists and accepts keyboard input without error** — the reactive filtering behaviour is covered at the component level:
+
+```typescript
+// ✅ Correct
+test('search filter input can be interacted with', async ({ page }) => {
+  const searchInput = page.getByPlaceholder('Search programs...');
+  await searchInput.click();
+  await searchInput.pressSequentially('Treeni');
+  await expect(searchInput).toHaveValue('Treeni');
+});
+```
+
+### Strict mode heading selectors
+
+`getByRole('heading', { name: 'X' })` matches **all** headings whose text contains `X` (e.g. both `<h1>Programs</h1>` and `<h2>Workout Programs</h2>`), causing a strict-mode violation. Always use `exact: true` when the page contains headings that are substrings of each other:
+
+```typescript
+// ❌ Wrong — matches h1 "Programs" AND h2 "Workout Programs"
+page.getByRole('heading', { name: 'Programs' })
+
+// ✅ Correct
+page.getByRole('heading', { name: 'Programs', exact: true })
+```
+
+### Detail page navigation pattern
+
+Never hardcode UUIDs or slugs in e2e tests. Always navigate to a detail page **via the list page**:
+
+```typescript
+test.beforeEach(async ({ page }) => {
+  await page.goto('/programs');
+  await page.locator('a[href^="/programs/"]').first().click();
+  await page.waitForURL(/\/programs\/.+/);
+});
+```

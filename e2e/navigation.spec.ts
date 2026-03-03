@@ -27,6 +27,12 @@ test.describe('Sidebar navigation', () => {
 		await expect(page).toHaveURL('/stats');
 	});
 
+	test('Clicking Programs navigates to /programs', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: 'Programs' }).click();
+		await expect(page).toHaveURL('/programs');
+	});
+
 	test('Clicking Dashboard from another page navigates back to /', async ({ page }) => {
 		await page.goto('/workouts');
 		await page.getByRole('link', { name: 'Dashboard' }).click();
@@ -34,11 +40,12 @@ test.describe('Sidebar navigation', () => {
 	});
 
 	test('Sidebar is visible on all main routes', async ({ page }) => {
-		for (const route of ['/', '/workouts', '/exercises', '/stats']) {
+		for (const route of ['/', '/workouts', '/exercises', '/programs', '/stats']) {
 			await page.goto(route);
 			await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
 			await expect(page.getByRole('link', { name: 'Workouts' })).toBeVisible();
 			await expect(page.getByRole('link', { name: 'Exercises' })).toBeVisible();
+			await expect(page.getByRole('link', { name: 'Programs' })).toBeVisible();
 			await expect(page.getByRole('link', { name: 'Stats' })).toBeVisible();
 		}
 	});

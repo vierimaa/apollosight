@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { House, Dumbbell, ListChecks, Trophy } from 'lucide-svelte';
+	import { House, Dumbbell, ListChecks, Trophy, Layers } from 'lucide-svelte';
 
 	interface NavItem {
 		href: string;
@@ -13,6 +13,7 @@
 		{ href: '/', label: 'Dashboard', icon: House },
 		{ href: '/workouts', label: 'Workouts', icon: Dumbbell },
 		{ href: '/exercises', label: 'Exercises', icon: ListChecks },
+		{ href: '/programs', label: 'Programs', icon: Layers },
 		{ href: '/stats', label: 'Stats', icon: Trophy }
 	];
 
