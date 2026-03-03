@@ -26,3 +26,13 @@ export interface ExerciseHistoryEntry extends Exercise {
   workout_date: string;
   workout_uuid: string;
 }
+
+/** A weight entry from FatSecret's weight diary. */
+export interface WeightEntry {
+  /** Days elapsed since January 1, 1970 (FatSecret's date format). */
+  date_int: number;
+  /** ISO 8601 date string derived from date_int. */
+  date: string;
+  weight_kg: number;
+  weight_comment?: string;
+}

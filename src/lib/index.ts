@@ -1,5 +1,5 @@
 // Types
-export type { WorkoutSet, Exercise, WorkoutSession, ExerciseHistoryEntry } from './types';
+export type { WorkoutSet, Exercise, WorkoutSession, ExerciseHistoryEntry, WeightEntry } from './types';
 
 // Layout components
 export { default as AppShell } from './components/layout/AppShell.svelte';

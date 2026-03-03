@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { House, Dumbbell, ListChecks, Trophy, Layers } from 'lucide-svelte';
+	import { House, Dumbbell, ListChecks, Trophy, Layers, Scale } from 'lucide-svelte';
 
 	interface NavItem {
 		href: string;
@@ -14,7 +14,8 @@
 		{ href: '/workouts', label: 'Workouts', icon: Dumbbell },
 		{ href: '/exercises', label: 'Exercises', icon: ListChecks },
 		{ href: '/programs', label: 'Programs', icon: Layers },
-		{ href: '/stats', label: 'Stats', icon: Trophy }
+		{ href: '/stats', label: 'Stats', icon: Trophy },
+		{ href: '/weight', label: 'Weight', icon: Scale }
 	];
 
 	const isActive = (href: string, pathname: string): boolean => {
