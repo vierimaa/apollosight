@@ -23,6 +23,10 @@
 		}>;
 		title?: string;
 		yAxisBeginAtZero?: boolean;
+		/** Unit suffix appended to tooltip values, e.g. "kcal" or "g". */
+		tooltipUnit?: string;
+		/** Stack all datasets on top of each other. */
+		stacked?: boolean;
 		class?: string;
 	}
 
@@ -31,6 +35,8 @@
 		datasets,
 		title,
 		yAxisBeginAtZero = true,
+		tooltipUnit = '',
+		stacked = false,
 		class: className = ''
 	}: Props = $props();
 
@@ -58,6 +64,10 @@
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				interaction: {
+					mode: 'index',
+					intersect: false
+				},
 				plugins: {
 					legend: {
 						display: currentDatasets.length > 1,
@@ -71,27 +81,40 @@
 								text: title,
 								color: 'rgb(156, 163, 175)'
 							}
+						: undefined,
+					tooltip: tooltipUnit
+						? {
+								callbacks: {
+									label: (ctx) => {
+										const raw = ctx.parsed.y;
+										const formatted = raw.toLocaleString('fi-FI');
+										return ` ${ctx.dataset.label}: ${formatted} ${tooltipUnit}`;
+									}
+								}
+							}
 						: undefined
 				},
 				scales: {
 					y: {
+						stacked: stacked,
 						beginAtZero: yAxisBeginAtZero,
 						ticks: {
-							color: 'rgb(156, 163, 175)',
-							stepSize: 1
+							color: 'rgb(156, 163, 175)'
 						},
 						grid: {
-							color: 'rgba(156, 163, 175, 0.1)'
+							color: 'rgba(156, 163, 175, 0.18)'
 						}
 					},
 					x: {
+						stacked: stacked,
 						ticks: {
 							color: 'rgb(156, 163, 175)',
 							maxRotation: 45,
-							minRotation: 0
+							minRotation: 0,
+							maxTicksLimit: 14
 						},
 						grid: {
-							color: 'rgba(156, 163, 175, 0.1)'
+							color: 'rgba(156, 163, 175, 0.07)'
 						}
 					}
 				}

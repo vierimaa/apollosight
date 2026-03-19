@@ -16,8 +16,7 @@
 import type { RequestHandler } from './$types';
 import { FATSECRET_CONSUMER_KEY, FATSECRET_CONSUMER_SECRET } from '$env/static/private';
 import {
-	buildOAuth1Params,
-	parseFormEncoded,
+	FatSecretApi,
 	FATSECRET_ACCESS_TOKEN_URL
 } from '$lib/fatsecret';
 
@@ -39,7 +38,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	// oauth_token and oauth_verifier are OAuth protocol params — pass them via extraOAuthParams
 	// so they are included in both the signature base string AND the query string output.
-	const oauthParams = buildOAuth1Params(
+	const oauthParams = FatSecretApi.buildOAuth1Params(
 		'GET',
 		FATSECRET_ACCESS_TOKEN_URL,
 		{}, // no non-oauth request params
@@ -58,7 +57,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		return new Response(`FatSecret access_token error: ${text}`, { status: 502 });
 	}
 
-	const parsed = parseFormEncoded(await response.text());
+	const parsed = FatSecretApi.parseFormEncoded(await response.text());
 	const { oauth_token: accessToken, oauth_token_secret: accessSecret } = parsed;
 
 	if (!accessToken || !accessSecret) {

@@ -7,23 +7,20 @@ import {
 	FATSECRET_ACCESS_SECRET
 } from '$env/static/private';
 import { FatSecretApi } from '$lib/fatsecret';
-import type { WeightEntry } from '$lib/types';
+import type { NutritionEntry } from '$lib/types';
 
 /** How many calendar months back to fetch (inclusive of current month). */
-const MONTHS_TO_FETCH = 13;
+const MONTHS_TO_FETCH = 7;
 
 export const load: PageServerLoad = async () => {
-	// If the access token hasn't been set up yet, guide the user through OAuth flow.
 	if (!FATSECRET_ACCESS_TOKEN || !FATSECRET_ACCESS_SECRET) {
 		throw redirect(302, '/auth/fatsecret');
 	}
 
 	try {
-		// Build a Date pointing somewhere within each of the last MONTHS_TO_FETCH months.
 		const today = new Date();
 		const monthDates: Date[] = Array.from({ length: MONTHS_TO_FETCH }, (_, monthsBack) => {
-			const date = new Date(today.getFullYear(), today.getMonth() - monthsBack, 15);
-			return date;
+			return new Date(today.getFullYear(), today.getMonth() - monthsBack, 15);
 		});
 
 		const api = new FatSecretApi(
@@ -33,14 +30,13 @@ export const load: PageServerLoad = async () => {
 			FATSECRET_ACCESS_SECRET
 		);
 
-		// Fetch each month in parallel.
 		const monthResults = await Promise.all(
-			monthDates.map((date) => api.getWeightMonth(date))
+			monthDates.map((date) => api.getNutritionMonth(date))
 		);
 
 		// Flatten, deduplicate by date_int, and sort oldest → newest.
 		const seenDateInts = new Set<number>();
-		const allEntries: WeightEntry[] = [];
+		const allEntries: NutritionEntry[] = [];
 
 		for (const monthEntries of monthResults) {
 			for (const entry of monthEntries) {
@@ -54,13 +50,26 @@ export const load: PageServerLoad = async () => {
 		allEntries.sort((entryA, entryB) => entryA.date_int - entryB.date_int);
 
 		if (allEntries.length === 0) {
-			return { entries: [] as WeightEntry[] };
+			return {
+				entries: [] as NutritionEntry[],
+				totalDays: 0,
+				avgCalories: 0,
+				avgProtein: 0,
+				avgCarbs: 0,
+				avgFat: 0
+			};
 		}
 
-		return { entries: allEntries };
+		const totalDays = allEntries.length;
+		const avgCalories = Math.round(allEntries.reduce((sum, e) => sum + e.calories, 0) / totalDays);
+		const avgProtein = Math.round(allEntries.reduce((sum, e) => sum + e.protein_g, 0) / totalDays);
+		const avgCarbs = Math.round(allEntries.reduce((sum, e) => sum + e.carbohydrate_g, 0) / totalDays);
+		const avgFat = Math.round(allEntries.reduce((sum, e) => sum + e.fat_g, 0) / totalDays);
+
+		return { entries: allEntries, totalDays, avgCalories, avgProtein, avgCarbs, avgFat };
 	} catch (err) {
 		if (isHttpError(err)) throw err;
-		console.error('FatSecret weight fetch error:', err);
-		throw error(500, 'Failed to load weight data from FatSecret');
+		console.error('FatSecret nutrition fetch error:', err);
+		throw error(500, 'Failed to load nutrition data from FatSecret');
 	}
 };

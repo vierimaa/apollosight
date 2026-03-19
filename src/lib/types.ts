@@ -36,3 +36,15 @@ export interface WeightEntry {
   weight_kg: number;
   weight_comment?: string;
 }
+
+/** A daily nutrition summary entry from FatSecret's food diary. */
+export interface NutritionEntry {
+  /** Days elapsed since January 1, 1970 (FatSecret's date format). */
+  date_int: number;
+  /** ISO 8601 date string derived from date_int (YYYY-MM-DD). */
+  date: string;
+  calories: number;
+  protein_g: number;
+  carbohydrate_g: number;
+  fat_g: number;
+}

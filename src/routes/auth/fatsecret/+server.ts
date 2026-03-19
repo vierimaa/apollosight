@@ -14,8 +14,7 @@ import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { FATSECRET_CONSUMER_KEY, FATSECRET_CONSUMER_SECRET } from '$env/static/private';
 import {
-	buildOAuth1Params,
-	parseFormEncoded,
+	FatSecretApi,
 	FATSECRET_REQUEST_TOKEN_URL,
 	FATSECRET_AUTHORIZE_URL
 } from '$lib/fatsecret';
@@ -25,7 +24,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	// FatSecret's request_token endpoint expects all OAuth params in the POST body
 	// (not in an Authorization header). Build signed params and send as form fields.
-	const oauthParams = buildOAuth1Params(
+	const oauthParams = FatSecretApi.buildOAuth1Params(
 		'POST',
 		FATSECRET_REQUEST_TOKEN_URL,
 		{},
@@ -47,7 +46,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		return new Response(`FatSecret request_token error: ${text}`, { status: 502 });
 	}
 
-	const parsed = parseFormEncoded(await response.text());
+	const parsed = FatSecretApi.parseFormEncoded(await response.text());
 	const { oauth_token, oauth_token_secret } = parsed;
 
 	if (!oauth_token || !oauth_token_secret) {
