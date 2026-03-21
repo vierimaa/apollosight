@@ -12,10 +12,19 @@ import type { WeightEntry } from '$lib/types';
 /** How many calendar months back to fetch (inclusive of current month). */
 const MONTHS_TO_FETCH = 13;
 
+type WeightResult = { entries: WeightEntry[] };
+
+let weightCache: { data: WeightResult; expiresAt: number } | null = null;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 export const load: PageServerLoad = async () => {
 	// If the access token hasn't been set up yet, guide the user through OAuth flow.
 	if (!FATSECRET_ACCESS_TOKEN || !FATSECRET_ACCESS_SECRET) {
 		throw redirect(302, '/auth/fatsecret');
+	}
+
+	if (weightCache && Date.now() < weightCache.expiresAt) {
+		return weightCache.data;
 	}
 
 	try {
@@ -54,10 +63,14 @@ export const load: PageServerLoad = async () => {
 		allEntries.sort((entryA, entryB) => entryA.date_int - entryB.date_int);
 
 		if (allEntries.length === 0) {
-			return { entries: [] as WeightEntry[] };
+			const emptyResult: WeightResult = { entries: [] as WeightEntry[] };
+			weightCache = { data: emptyResult, expiresAt: Date.now() + CACHE_TTL_MS };
+			return emptyResult;
 		}
 
-		return { entries: allEntries };
+		const result: WeightResult = { entries: allEntries };
+		weightCache = { data: result, expiresAt: Date.now() + CACHE_TTL_MS };
+		return result;
 	} catch (err) {
 		if (isHttpError(err)) throw err;
 		console.error('FatSecret weight fetch error:', err);

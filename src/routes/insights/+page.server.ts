@@ -12,9 +12,18 @@ import type { CombinedDayEntry } from '$lib/types';
 /** How many calendar months back to fetch (inclusive of current month). */
 const MONTHS_TO_FETCH = 3;
 
+type InsightsResult = { entries: CombinedDayEntry[] };
+
+let insightsCache: { data: InsightsResult; expiresAt: number } | null = null;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 export const load: PageServerLoad = async () => {
 	if (!FATSECRET_ACCESS_TOKEN || !FATSECRET_ACCESS_SECRET) {
 		throw redirect(302, '/auth/fatsecret');
+	}
+
+	if (insightsCache && Date.now() < insightsCache.expiresAt) {
+		return insightsCache.data;
 	}
 
 	try {
@@ -72,7 +81,9 @@ export const load: PageServerLoad = async () => {
 		const allEntries: CombinedDayEntry[] = [...entryMap.values()];
 		allEntries.sort((entryA, entryB) => entryA.date_int - entryB.date_int);
 
-		return { entries: allEntries };
+		const result: InsightsResult = { entries: allEntries };
+		insightsCache = { data: result, expiresAt: Date.now() + CACHE_TTL_MS };
+		return result;
 	} catch (err) {
 		if (isHttpError(err)) throw err;
 		console.error('FatSecret insights fetch error:', err);

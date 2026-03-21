@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * The weight page SSR-redirects to /auth/fatsecret when
@@ -11,56 +12,66 @@ test.describe('Weight (/weight)', () => {
 	// Run serially to avoid hammering the FatSecret API in parallel (13 month calls per load).
 	test.describe.configure({ mode: 'serial' });
 
-	test.beforeEach(async ({ page }) => {
-		await page.goto('/weight');
+	let sharedPage: Page;
+
+	test.beforeAll(async ({ browser }) => {
+		sharedPage = await browser.newPage();
+		await sharedPage.goto('/weight');
 		// Wait for the 13 parallel FatSecret month requests to complete.
-		await page.waitForLoadState('networkidle');
+		await sharedPage.waitForLoadState('networkidle');
+	});
+
+	test.afterAll(async () => {
+		await sharedPage.close();
+	});
+
+	test.beforeEach(async () => {
 		test.skip(
-			new URL(page.url()).pathname !== '/weight',
+			new URL(sharedPage.url()).pathname !== '/weight',
 			'FatSecret credentials not configured — skipping authenticated weight tests'
 		);
 		// Skip data-dependent tests when no weight entries exist
-		const hasNoData = await page.getByText('No weight entries found').isVisible();
+		const hasNoData = await sharedPage.getByText('No weight entries found').isVisible();
 		test.skip(hasNoData, 'No weight data available — skipping data-dependent tests');
 	});
 
-	test('page heading is visible', async ({ page }) => {
-		await expect(page.getByRole('heading', { name: 'Weight', exact: true })).toBeVisible();
+	test('page heading is visible', async () => {
+		await expect(sharedPage.getByRole('heading', { name: 'Weight', exact: true })).toBeVisible();
 	});
 
-	test('date range picker is visible with From and To inputs', async ({ page }) => {
-		await expect(page.locator('label[for="start-date"]')).toBeVisible();
-		await expect(page.locator('label[for="end-date"]')).toBeVisible();
-		await expect(page.locator('#start-date')).toBeVisible();
-		await expect(page.locator('#end-date')).toBeVisible();
+	test('date range picker is visible with From and To inputs', async () => {
+		await expect(sharedPage.locator('label[for="start-date"]')).toBeVisible();
+		await expect(sharedPage.locator('label[for="end-date"]')).toBeVisible();
+		await expect(sharedPage.locator('#start-date')).toBeVisible();
+		await expect(sharedPage.locator('#end-date')).toBeVisible();
 	});
 
-	test('date range inputs are enabled and accept input', async ({ page }) => {
-		await expect(page.locator('#start-date')).toBeEnabled();
-		await expect(page.locator('#end-date')).toBeEnabled();
+	test('date range inputs are enabled and accept input', async () => {
+		await expect(sharedPage.locator('#start-date')).toBeEnabled();
+		await expect(sharedPage.locator('#end-date')).toBeEnabled();
 	});
 
-	test('entry count label is visible', async ({ page }) => {
+	test('entry count label is visible', async () => {
 		// Target the span in the date range toolbar (not the "Change (N entries)" stat card subtitle)
-		await expect(page.locator('span.ml-auto').filter({ hasText: /\d+ entr(y|ies)/ })).toBeVisible();
+		await expect(sharedPage.locator('span.ml-auto').filter({ hasText: /\d+ entr(y|ies)/ })).toBeVisible();
 	});
 
-	test('four stat cards are visible', async ({ page }) => {
-		await expect(page.getByText('Current Weight')).toBeVisible();
-		await expect(page.getByText('Lowest')).toBeVisible();
-		await expect(page.getByText('Highest')).toBeVisible();
+	test('four stat cards are visible', async () => {
+		await expect(sharedPage.getByText('Current Weight')).toBeVisible();
+		await expect(sharedPage.getByText('Lowest')).toBeVisible();
+		await expect(sharedPage.getByText('Highest')).toBeVisible();
 		// "Change" appears as part of e.g. "Change (42 entries)" — use regex
-		await expect(page.getByText(/^Change/)).toBeVisible();
+		await expect(sharedPage.getByText(/^Change/)).toBeVisible();
 	});
 
-	test('Rate of Change section is visible with all three period cards', async ({ page }) => {
-		await expect(page.getByText('Rate of Change')).toBeVisible();
-		await expect(page.getByText('Selected period')).toBeVisible();
-		await expect(page.getByText('Last 7 days')).toBeVisible();
-		await expect(page.getByText('Last 30 days')).toBeVisible();
+	test('Rate of Change section is visible with all three period cards', async () => {
+		await expect(sharedPage.getByText('Rate of Change')).toBeVisible();
+		await expect(sharedPage.getByText('Selected period')).toBeVisible();
+		await expect(sharedPage.getByText('Last 7 days')).toBeVisible();
+		await expect(sharedPage.getByText('Last 30 days')).toBeVisible();
 	});
 
-	test('Weight Over Time chart section is visible', async ({ page }) => {
-		await expect(page.getByText('Weight Over Time')).toBeVisible();
+	test('Weight Over Time chart section is visible', async () => {
+		await expect(sharedPage.getByText('Weight Over Time')).toBeVisible();
 	});
 });

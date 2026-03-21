@@ -12,9 +12,25 @@ import type { NutritionEntry } from '$lib/types';
 /** How many calendar months back to fetch (inclusive of current month). */
 const MONTHS_TO_FETCH = 7;
 
+type NutritionResult = {
+	entries: NutritionEntry[];
+	totalDays: number;
+	avgCalories: number;
+	avgProtein: number;
+	avgCarbs: number;
+	avgFat: number;
+};
+
+let nutritionCache: { data: NutritionResult; expiresAt: number } | null = null;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 export const load: PageServerLoad = async () => {
 	if (!FATSECRET_ACCESS_TOKEN || !FATSECRET_ACCESS_SECRET) {
 		throw redirect(302, '/auth/fatsecret');
+	}
+
+	if (nutritionCache && Date.now() < nutritionCache.expiresAt) {
+		return nutritionCache.data;
 	}
 
 	try {
@@ -50,7 +66,7 @@ export const load: PageServerLoad = async () => {
 		allEntries.sort((entryA, entryB) => entryA.date_int - entryB.date_int);
 
 		if (allEntries.length === 0) {
-			return {
+			const emptyResult: NutritionResult = {
 				entries: [] as NutritionEntry[],
 				totalDays: 0,
 				avgCalories: 0,
@@ -58,6 +74,8 @@ export const load: PageServerLoad = async () => {
 				avgCarbs: 0,
 				avgFat: 0
 			};
+			nutritionCache = { data: emptyResult, expiresAt: Date.now() + CACHE_TTL_MS };
+			return emptyResult;
 		}
 
 		const totalDays = allEntries.length;
@@ -66,7 +84,9 @@ export const load: PageServerLoad = async () => {
 		const avgCarbs = Math.round(allEntries.reduce((sum, e) => sum + e.carbohydrate_g, 0) / totalDays);
 		const avgFat = Math.round(allEntries.reduce((sum, e) => sum + e.fat_g, 0) / totalDays);
 
-		return { entries: allEntries, totalDays, avgCalories, avgProtein, avgCarbs, avgFat };
+		const result: NutritionResult = { entries: allEntries, totalDays, avgCalories, avgProtein, avgCarbs, avgFat };
+		nutritionCache = { data: result, expiresAt: Date.now() + CACHE_TTL_MS };
+		return result;
 	} catch (err) {
 		if (isHttpError(err)) throw err;
 		console.error('FatSecret nutrition fetch error:', err);
