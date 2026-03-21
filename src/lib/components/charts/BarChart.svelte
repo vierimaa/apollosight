@@ -27,6 +27,8 @@
 		tooltipUnit?: string;
 		/** Stack all datasets on top of each other. */
 		stacked?: boolean;
+		/** Show a footer in the tooltip with the total of all dataset values at the hovered index. */
+		showTooltipTotal?: boolean;
 		class?: string;
 	}
 
@@ -37,6 +39,7 @@
 		yAxisBeginAtZero = true,
 		tooltipUnit = '',
 		stacked = false,
+		showTooltipTotal = false,
 		class: className = ''
 	}: Props = $props();
 
@@ -50,7 +53,7 @@
 			chart.destroy();
 		}
 
-		const config: ChartConfiguration = {
+		const config: ChartConfiguration<'bar'> = {
 			type: 'bar',
 			data: {
 				labels: currentLabels,
@@ -82,14 +85,26 @@
 								color: 'rgb(156, 163, 175)'
 							}
 						: undefined,
-					tooltip: tooltipUnit
+					tooltip: (tooltipUnit || showTooltipTotal)
 						? {
 								callbacks: {
-									label: (ctx) => {
-										const raw = ctx.parsed.y;
-										const formatted = raw.toLocaleString('fi-FI');
-										return ` ${ctx.dataset.label}: ${formatted} ${tooltipUnit}`;
-									}
+									label: tooltipUnit
+										? (ctx) => {
+												const raw = ctx.parsed.y;
+												const formatted = raw.toLocaleString('fi-FI');
+												return ` ${ctx.dataset.label}: ${formatted} ${tooltipUnit}`;
+											}
+										: undefined,
+									footer: showTooltipTotal
+										? (items) => {
+												const total = items.reduce(
+													(sum, item) => sum + item.parsed.y,
+													0
+												);
+												const formatted = Math.round(total).toLocaleString('fi-FI');
+												return `Total: ${formatted}${tooltipUnit ? ` ${tooltipUnit}` : ''}`;
+											}
+										: undefined
 								}
 							}
 						: undefined

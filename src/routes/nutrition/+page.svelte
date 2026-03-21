@@ -368,6 +368,7 @@
 					datasets={stackedMacroDatasets}
 					stacked={true}
 					tooltipUnit="kcal"
+					showTooltipTotal={true}
 					class="h-72"
 				/>
 			</SectionCard>
