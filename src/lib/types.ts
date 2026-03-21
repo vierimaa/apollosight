@@ -37,6 +37,19 @@ export interface WeightEntry {
   weight_comment?: string;
 }
 
+/** A combined day entry merging weight and nutrition data by date. */
+export interface CombinedDayEntry {
+  /** Days elapsed since January 1, 1970 (FatSecret's date format). */
+  date_int: number;
+  /** ISO 8601 date string (YYYY-MM-DD). */
+  date: string;
+  weight_kg?: number;
+  calories?: number;
+  protein_g?: number;
+  carbohydrate_g?: number;
+  fat_g?: number;
+}
+
 /** A daily nutrition summary entry from FatSecret's food diary. */
 export interface NutritionEntry {
   /** Days elapsed since January 1, 1970 (FatSecret's date format). */

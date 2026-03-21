@@ -261,12 +261,14 @@
 			<!-- Weight Over Time Chart -->
 			<SectionCard title="Weight Over Time" subtitle="Recorded weight entries from FatSecret">
 				{#snippet children()}
+				<div class="h-90">
 					<LineChart
 						labels={chartLabels}
 						datasets={chartDatasets}
 						title="Weight (kg)"
 						yAxisBeginAtZero={false}
 					/>
+				</div>
 				{/snippet}
 			</SectionCard>
 		{/if}

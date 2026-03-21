@@ -19,6 +19,9 @@ test.describe('Weight (/weight)', () => {
 			new URL(page.url()).pathname !== '/weight',
 			'FatSecret credentials not configured — skipping authenticated weight tests'
 		);
+		// Skip data-dependent tests when no weight entries exist
+		const hasNoData = await page.getByText('No weight entries found').isVisible();
+		test.skip(hasNoData, 'No weight data available — skipping data-dependent tests');
 	});
 
 	test('page heading is visible', async ({ page }) => {

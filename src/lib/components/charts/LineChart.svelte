@@ -22,6 +22,7 @@
 			data: (number | null)[];
 			borderColor: string;
 			backgroundColor: string;
+			spanGaps?: boolean;
 		}>;
 		title?: string;
 		yAxisBeginAtZero?: boolean;
