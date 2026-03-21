@@ -22,3 +22,6 @@ export { default as LoadingSkeleton } from './components/feedback/LoadingSkeleto
 export { default as LineChart } from './components/charts/LineChart.svelte';
 export { default as BarChart } from './components/charts/BarChart.svelte';
 
+// Filter components
+export { default as DateRangePicker } from './components/filters/DateRangePicker.svelte';
+

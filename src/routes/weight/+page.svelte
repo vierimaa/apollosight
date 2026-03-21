@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PageHeader, StatCard, SectionCard, LineChart, EmptyState } from '$lib';
+	import { PageHeader, StatCard, SectionCard, LineChart, EmptyState, DateRangePicker } from '$lib';
 	import { Scale, TrendingDown, TrendingUp, Minus, Calendar, Activity } from 'lucide-svelte';
 	import type { WeightEntry } from '$lib';
 
@@ -30,14 +30,9 @@
 	const minDate = $derived(data.entries[0]?.date ?? '');
 	const maxDate = $derived(data.entries[data.entries.length - 1]?.date ?? '');
 
-	// User-controlled date range — start empty, initialized once on mount via $effect
+	// User-controlled date range — initialized by DateRangePicker on mount
 	let startDate = $state('');
 	let endDate = $state('');
-
-	$effect(() => {
-		startDate = minDate;
-		endDate = maxDate;
-	});
 
 	const filteredEntries = $derived(
 		!startDate && !endDate
@@ -140,51 +135,13 @@
 		</EmptyState>
 	{:else}
 		<!-- Date Range Picker -->
-		<div class="preset-filled-surface-100-900 rounded-lg p-4 shadow-sm flex flex-wrap items-center gap-4">
-			<div class="flex items-center gap-2 text-surface-600-400">
-				<Calendar class="w-4 h-4" />
-				<span class="text-sm font-medium">Date range</span>
-			</div>
-			<div class="flex flex-wrap items-center gap-3">
-				<div class="flex items-center gap-2">
-					<label for="start-date" class="text-sm text-surface-600-400">From</label>
-					<input
-						id="start-date"
-						type="date"
-						min={minDate}
-						max={endDate}
-						value={startDate}
-						oninput={(event) => { startDate = (event.currentTarget as HTMLInputElement).value; }}
-						class="px-3 py-1.5 rounded-lg border border-surface-300-700 bg-surface-50-950
-							text-surface-950-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-					/>
-				</div>
-				<div class="flex items-center gap-2">
-					<label for="end-date" class="text-sm text-surface-600-400">To</label>
-					<input
-						id="end-date"
-						type="date"
-						min={startDate}
-						max={maxDate}
-						value={endDate}
-						oninput={(event) => { endDate = (event.currentTarget as HTMLInputElement).value; }}
-						class="px-3 py-1.5 rounded-lg border border-surface-300-700 bg-surface-50-950
-							text-surface-950-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-					/>
-				</div>
-				{#if startDate !== minDate || endDate !== maxDate}
-					<button
-						onclick={() => { startDate = minDate; endDate = maxDate; }}
-						class="text-sm text-primary-500 hover:text-primary-400 transition-colors"
-					>
-						Reset
-					</button>
-				{/if}
-			</div>
-			<span class="text-sm text-surface-500-400 ml-auto">
-				{filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
-			</span>
-		</div>
+		<DateRangePicker {minDate} {maxDate} bind:startDate bind:endDate>
+			{#snippet trailing()}
+				<span class="text-sm text-surface-500-400 ml-auto">
+					{filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
+				</span>
+			{/snippet}
+		</DateRangePicker>
 
 		{#if filteredEntries.length === 0}
 			<EmptyState message="No weight entries in the selected date range.">
