@@ -2,6 +2,7 @@ import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { API_BASE } from '$lib/api';
 import { slugify } from '$lib/utils/format';
+import { calcSessionVolume } from '$lib/utils/workout';
 import type { WorkoutSession } from '$lib';
 
 export interface ProgramSummary {
@@ -39,12 +40,7 @@ export const load: PageServerLoad = async () => {
 			const title = workout.title;
 			const date = workout.start_time;
 
-			let sessionVolume = 0;
-			for (const exercise of workout.exercises ?? []) {
-				for (const set of exercise.sets ?? []) {
-					sessionVolume += set.weight_kg * set.reps;
-				}
-			}
+			const sessionVolume = calcSessionVolume(workout.exercises ?? []);
 
 			if (!programMap.has(title)) {
 				programMap.set(title, {

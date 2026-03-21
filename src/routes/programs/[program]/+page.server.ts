@@ -2,6 +2,7 @@ import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { API_BASE } from '$lib/api';
 import { slugify } from '$lib/utils/format';
+import { calcSessionVolume, secondsToMinutes } from '$lib/utils/workout';
 import type { WorkoutSession } from '$lib';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -23,13 +24,12 @@ export const load: PageServerLoad = async ({ params }) => {
 
 			if (!programTitle) programTitle = workout.title;
 
-			let sessionVolume = 0;
+			const sessionVolume = calcSessionVolume(workout.exercises ?? []);
 			let sessionSets = 0;
 			let sessionReps = 0;
 
 			for (const exercise of workout.exercises ?? []) {
 				for (const set of exercise.sets ?? []) {
-					sessionVolume += set.weight_kg * set.reps;
 					sessionSets += 1;
 					sessionReps += set.reps;
 				}
@@ -65,7 +65,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		const duringSessions = matchedSessions.filter((session) => session.duration_seconds != null);
 		const avgDuration =
 			duringSessions.length > 0
-				? Math.round(
+				? secondsToMinutes(
 						duringSessions.reduce(
 							(total, session) => total + (session.duration_seconds ?? 0),
 							0
@@ -78,7 +78,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		);
 		const volumeData = matchedSessions.map((session) => session.totalVolume);
 		const durationData = matchedSessions.map((session) =>
-			session.duration_seconds != null ? Math.round(session.duration_seconds / 60) : null
+			session.duration_seconds != null ? secondsToMinutes(session.duration_seconds) : null
 		);
 		const setsData = matchedSessions.map((session) => session.totalSets);
 		const repsData = matchedSessions.map((session) => session.totalReps);

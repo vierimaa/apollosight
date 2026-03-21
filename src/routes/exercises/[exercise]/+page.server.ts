@@ -2,6 +2,7 @@ import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { API_BASE } from "$lib/api";
 import { slugify } from "$lib/utils/format";
+import { estimateOneRM, calcSessionVolume, sortExerciseHistoryByDate } from "$lib/utils/workout";
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
@@ -36,38 +37,25 @@ export const load: PageServerLoad = async ({ params }) => {
     }
 
     // Pre-sort ascending by date so the client can filter without re-sorting
-    exerciseHistory.sort(
-      (entryA, entryB) => new Date(entryA.workout_date).getTime() - new Date(entryB.workout_date).getTime()
-    );
+    const sortedHistory = sortExerciseHistoryByDate(exerciseHistory, 'asc');
 
-    const totalSessions = exerciseHistory.length;
+    const totalSessions = sortedHistory.length;
 
-    const bestWeight = exerciseHistory.reduce((best, entry) => {
-      const maxInSession = Math.max(...entry.sets.map((set: { weight_kg: number }) => set.weight_kg));
+    const bestWeight = sortedHistory.reduce((best, entry) => {
+      const maxInSession = Math.max(...entry.sets.map((set) => set.weight_kg));
       return Math.max(best, maxInSession);
     }, 0);
 
-    const bestOneRM = exerciseHistory.reduce((best, entry) => {
+    const bestOneRM = sortedHistory.reduce((best, entry) => {
       const maxInSession = Math.max(
-        ...entry.sets.map((set: { weight_kg: number; reps: number }) =>
-          set.weight_kg * (1 + 0.0333 * set.reps)
-        )
+        ...entry.sets.map((set) => estimateOneRM(set.weight_kg, set.reps))
       );
       return Math.max(best, maxInSession);
     }, 0);
 
-    const allTimeVolume = exerciseHistory.reduce(
-      (total: number, entry) =>
-        total +
-        entry.sets.reduce(
-          (setTotal: number, set: { weight_kg: number; reps: number }) =>
-            setTotal + set.weight_kg * set.reps,
-          0
-        ),
-      0
-    );
+    const allTimeVolume = calcSessionVolume(sortedHistory);
 
-    return { exerciseTitle, exerciseHistory, totalSessions, bestWeight, bestOneRM, allTimeVolume };
+    return { exerciseTitle, exerciseHistory: sortedHistory, totalSessions, bestWeight, bestOneRM, allTimeVolume };
   } catch (err) {
     if (isHttpError(err)) throw err;
     console.error("Error loading exercise detail:", err);

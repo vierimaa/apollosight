@@ -2,6 +2,7 @@ import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { API_BASE } from "$lib/api";
 import { formatDate, formatDuration } from "$lib/utils/format";
+import { calcSessionVolume, estimateOneRM, VALID_SET_TYPES, sortWorkoutsByDate } from "$lib/utils/workout";
 import type { WorkoutSession } from "$lib/types";
 
 // ─── Time helpers ──────────────────────────────────────────────────────────────
@@ -62,13 +63,7 @@ const computeStreak = (workouts: WorkoutSession[]): number => {
 const computeAllTimeVolume = (workouts: WorkoutSession[]): number => {
   let total = 0;
   for (const workout of workouts) {
-    for (const exercise of workout.exercises) {
-      for (const set of exercise.sets) {
-        if (set.set_type === "normal" || set.set_type === "failure") {
-          total += set.weight_kg * set.reps;
-        }
-      }
-    }
+    total += calcSessionVolume(workout.exercises);
   }
   return total;
 };
@@ -109,10 +104,7 @@ interface PrEvent {
 }
 
 const computeRecentPrs = (workouts: WorkoutSession[], count: number): PrEvent[] => {
-  const sorted = [...workouts].sort(
-    (workoutA, workoutB) =>
-      new Date(workoutA.start_time).getTime() - new Date(workoutB.start_time).getTime()
-  );
+  const sorted = sortWorkoutsByDate(workouts, 'asc');
 
   const bestOneRM = new Map<string, number>();
   const bestWeight = new Map<string, number>();
@@ -121,9 +113,7 @@ const computeRecentPrs = (workouts: WorkoutSession[], count: number): PrEvent[] 
   for (const workout of sorted) {
     for (const exercise of workout.exercises) {
       const exerciseTitle = exercise.exercise_title;
-      const validSets = exercise.sets.filter(
-        (set) => set.set_type === "normal" || set.set_type === "failure"
-      );
+      const validSets = exercise.sets.filter((set) => VALID_SET_TYPES.has(set.set_type));
       if (validSets.length === 0) continue;
 
       let sessionMaxOneRM = 0;
@@ -131,7 +121,7 @@ const computeRecentPrs = (workouts: WorkoutSession[], count: number): PrEvent[] 
 
       for (const set of validSets) {
         if (set.reps > 0 && set.weight_kg > 0) {
-          const estimatedOneRM = set.weight_kg * (1 + 0.0333 * set.reps);
+          const estimatedOneRM = estimateOneRM(set.weight_kg, set.reps);
           if (estimatedOneRM > sessionMaxOneRM) sessionMaxOneRM = estimatedOneRM;
           if (set.weight_kg > sessionMaxWeight) sessionMaxWeight = set.weight_kg;
         }
@@ -258,11 +248,7 @@ export const load: PageServerLoad = async () => {
     const recentPrs = computeRecentPrs(workoutData, 5);
 
     // ─── Recent workouts ───────────────────────────────────────────────────────
-    const recentWorkouts = [...workoutData]
-      .sort(
-        (workoutA, workoutB) =>
-          new Date(workoutB.start_time).getTime() - new Date(workoutA.start_time).getTime()
-      )
+    const recentWorkouts = sortWorkoutsByDate(workoutData, 'desc')
       .slice(0, 5)
       .map((workout) => ({
         uuid: workout.uuid,

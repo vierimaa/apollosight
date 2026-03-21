@@ -2,6 +2,7 @@ import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { API_BASE } from '$lib/api';
 import { slugify } from '$lib/utils/format';
+import { VALID_SET_TYPES, estimateOneRM, sortWorkoutsByDate } from '$lib/utils/workout';
 import type { WorkoutSession } from '$lib/types';
 
 interface SetPR {
@@ -20,7 +21,6 @@ interface ExercisePR {
 	lastSeenDate: string;
 }
 
-const VALID_SET_TYPES = new Set(['normal', 'failure']);
 
 export const load: PageServerLoad = async () => {
 	try {
@@ -30,10 +30,7 @@ export const load: PageServerLoad = async () => {
 		const workouts: WorkoutSession[] = await response.json();
 
 		// Sort oldest → newest so we can track progression chronologically
-		const sortedWorkouts = [...workouts].sort(
-			(workoutA, workoutB) =>
-				new Date(workoutA.start_time).getTime() - new Date(workoutB.start_time).getTime()
-		);
+		const sortedWorkouts = sortWorkoutsByDate(workouts, 'asc');
 
 		const prMap = new Map<
 			string,
@@ -79,7 +76,7 @@ export const load: PageServerLoad = async () => {
 					if (!VALID_SET_TYPES.has(set.set_type)) continue;
 					if (set.weight_kg === 0 || set.reps === 0) continue;
 
-					const oneRM = set.weight_kg * (1 + 0.0333 * set.reps);
+					const oneRM = estimateOneRM(set.weight_kg, set.reps);
 
 					if (oneRM > record.bestOneRM.value) {
 						record.bestOneRM = { value: oneRM, date: workoutDate };

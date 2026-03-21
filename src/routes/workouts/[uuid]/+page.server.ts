@@ -1,19 +1,9 @@
 import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { API_BASE } from '$lib/api';
+import { calcSessionVolume } from '$lib/utils/workout';
 import type { WorkoutSession } from '$lib/types';
 
-const calcVolume = (exercises: WorkoutSession['exercises']): number => {
-	let total = 0;
-	for (const exercise of exercises) {
-		for (const set of exercise.sets) {
-			if (set.set_type === 'normal' || set.set_type === 'failure') {
-				total += set.weight_kg * set.reps;
-			}
-		}
-	}
-	return Math.round(total);
-};
 
 export const load: PageServerLoad = async ({ params }) => {
 	try {
@@ -27,11 +17,11 @@ export const load: PageServerLoad = async ({ params }) => {
 		// Per-exercise volumes (warmup sets excluded)
 		const exerciseVolumes: Record<string, number> = {};
 		for (const exercise of workout.exercises) {
-			exerciseVolumes[exercise.exercise_title] = calcVolume([exercise]);
+			exerciseVolumes[exercise.exercise_title] = Math.round(calcSessionVolume([exercise]));
 		}
 
 		// Total volume across all exercises
-		const totalVolume = calcVolume(workout.exercises);
+		const totalVolume = Math.round(calcSessionVolume(workout.exercises));
 
 		// Find previous workout with the same title
 		const titleResponse = await fetch(

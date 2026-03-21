@@ -1,6 +1,7 @@
 import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { API_BASE } from "$lib/api";
+import { calcSessionVolume, sortWorkoutsByDate, toDateString, secondsToMinutes } from "$lib/utils/workout";
 import type { WorkoutSession } from "$lib";
 
 interface MonthAccumulator {
@@ -35,18 +36,6 @@ export interface WorkoutSummary {
   totalSets: number;
 }
 
-const calcVolume = (workout: WorkoutSession): number => {
-  let total = 0;
-  for (const exercise of workout.exercises) {
-    for (const set of exercise.sets) {
-      if (set.set_type === 'normal' || set.set_type === 'failure') {
-        total += set.weight_kg * set.reps;
-      }
-    }
-  }
-  return total;
-};
-
 const calcTotalSets = (workout: WorkoutSession): number => {
   let total = 0;
   for (const exercise of workout.exercises) {
@@ -56,15 +45,14 @@ const calcTotalSets = (workout: WorkoutSession): number => {
 };
 
 const buildWorkoutSummaries = (workouts: WorkoutSession[]): WorkoutSummary[] =>
-  [...workouts]
-    .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+  sortWorkoutsByDate(workouts, 'desc')
     .map((workout) => ({
       uuid: workout.uuid,
       title: workout.title,
       start_time: workout.start_time,
       duration_seconds: workout.duration_seconds,
       exerciseCount: workout.exercises.length,
-      volume: Math.round(calcVolume(workout)),
+      volume: Math.round(calcSessionVolume(workout.exercises)),
       totalSets: calcTotalSets(workout)
     }));
 
@@ -85,7 +73,7 @@ const computeMonthlyChartData = (workouts: WorkoutSession[]): MonthlyChartData =
     const key = `${workoutDate.getFullYear()}-${workoutDate.getMonth()}`;
     const existing = monthMap.get(key) ?? { volumeTotal: 0, durationTotal: 0, count: 0 };
     monthMap.set(key, {
-      volumeTotal: existing.volumeTotal + calcVolume(workout),
+      volumeTotal: existing.volumeTotal + calcSessionVolume(workout.exercises),
       durationTotal: existing.durationTotal + (workout.duration_seconds ?? 0),
       count: existing.count + 1
     });
@@ -103,7 +91,7 @@ const computeMonthlyChartData = (workouts: WorkoutSession[]): MonthlyChartData =
   const avgDurationData: (number | null)[] = slots.map(({ year, month }) => {
     const acc = monthMap.get(`${year}-${month}`);
     if (!acc) return null;
-    return Math.round(acc.durationTotal / acc.count / 60);
+    return secondsToMinutes(acc.durationTotal / acc.count);
   });
 
   return { labels, volumeData, avgDurationData };
@@ -117,7 +105,7 @@ const computeCalendarData = (
 
   const workoutCounts = new Map<string, number>();
   for (const workout of workouts) {
-    const dateStr = new Date(workout.start_time).toISOString().split('T')[0];
+    const dateStr = toDateString(workout.start_time);
     workoutCounts.set(dateStr, (workoutCounts.get(dateStr) ?? 0) + 1);
   }
 
