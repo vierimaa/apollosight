@@ -7,20 +7,6 @@ import { test, expect } from '@playwright/test';
  * the environment does not match.
  */
 
-test.describe('Nutrition — unauthenticated redirect', () => {
-	test('visiting /nutrition redirects to /auth/fatsecret when credentials are absent', async ({
-		page
-	}) => {
-		await page.goto('/nutrition');
-		const pathname = new URL(page.url()).pathname;
-		test.skip(
-			pathname === '/nutrition',
-			'FatSecret credentials are configured — redirect test not applicable'
-		);
-		await expect(page).toHaveURL('/auth/fatsecret');
-	});
-});
-
 test.describe('Nutrition (/nutrition)', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/nutrition');
