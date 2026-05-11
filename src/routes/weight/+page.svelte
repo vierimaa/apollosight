@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PageHeader, StatCard, SectionCard, LineChart, EmptyState, DateRangePicker } from '$lib';
+	import { PageHeader, StatCard, SectionCard, LineChart, EmptyState, DateRangePicker, calcWeeklyRate } from '$lib';
 	import { Scale, TrendingDown, TrendingUp, Minus, Calendar, Activity } from 'lucide-svelte';
 	import type { WeightEntry } from '$lib';
 
@@ -7,18 +7,7 @@
 
 	const fmtKg = (kg: number) => `${kg.toFixed(1)} kg`;
 
-	/**
-	 * Compute average kg change per week between the first and last entry.
-	 * Returns null if there are fewer than 2 entries or the span is < 1 day.
-	 */
-	const calcWeeklyRate = (entries: WeightEntry[]): number | null => {
-		if (entries.length < 2) return null;
-		const first = entries[0];
-		const last = entries[entries.length - 1];
-		const daySpan = last.date_int - first.date_int;
-		if (daySpan < 1) return null;
-		return ((last.weight_kg - first.weight_kg) / daySpan) * 7;
-	};
+
 
 	/** Format a weekly rate as "+0.32 kg/wk" */
 	const fmtRate = (kgPerWeek: number): string => {

@@ -25,3 +25,6 @@ export { default as BarChart } from './components/charts/BarChart.svelte';
 // Filter components
 export { default as DateRangePicker } from './components/filters/DateRangePicker.svelte';
 
+// Utility functions
+export { calcWeeklyRate } from './utils/stats';
+

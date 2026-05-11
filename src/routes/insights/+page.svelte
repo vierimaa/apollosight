@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PageHeader, StatCard, SectionCard, LineChart, EmptyState, DateRangePicker } from '$lib';
+	import { PageHeader, StatCard, SectionCard, LineChart, EmptyState, DateRangePicker, calcWeeklyRate } from '$lib';
 	import { TrendingUp, TrendingDown, Minus, Flame, Beef, Calendar, Scale } from 'lucide-svelte';
 	import type { CombinedDayEntry } from '$lib';
 
@@ -42,15 +42,10 @@
 		).length
 	);
 
-	// Weekly rate of weight change — same formula as weight page
-	const weeklyRate = $derived.by((): number | null => {
-		if (weightEntries.length < 2) return null;
-		const first = weightEntries[0];
-		const last = weightEntries[weightEntries.length - 1];
-		const daySpan = last.date_int - first.date_int;
-		if (daySpan < 1) return null;
-		return ((last.weight_kg! - first.weight_kg!) / daySpan) * 7;
-	});
+	// Weekly rate of weight change — least-squares linear regression over all weight entries.
+	const weeklyRate = $derived(
+		calcWeeklyRate(weightEntries.map((entry: CombinedDayEntry) => ({ date_int: entry.date_int, weight_kg: entry.weight_kg! })))
+	);
 
 	const weightChange = $derived(
 		weightEntries.length >= 2

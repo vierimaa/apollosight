@@ -76,6 +76,7 @@
 	</div>
 
 	<!-- Exercises -->
+	<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
 	{#each workout.exercises as exercise (exercise.exercise_title)}
 		<SectionCard
 			title={exercise.exercise_title}
@@ -122,5 +123,6 @@
 			</DataTable>
 		</SectionCard>
 	{/each}
+	</div>
 </div>
 
