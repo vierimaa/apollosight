@@ -21,12 +21,6 @@ export default defineConfig({
 
 	webServer: [
 		{
-			command: 'npm run backend',
-			url: 'http://localhost:3000/workouts',
-			reuseExistingServer: !process.env.CI,
-			timeout: 10_000,
-		},
-		{
 			command: 'npm run dev',
 			url: 'http://localhost:5173',
 			reuseExistingServer: !process.env.CI,

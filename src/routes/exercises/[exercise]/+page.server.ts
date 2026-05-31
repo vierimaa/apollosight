@@ -1,19 +1,13 @@
 import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import { API_BASE } from "$lib/api";
+import { getWorkouts } from '$lib/db';
 import { slugify } from "$lib/utils/format";
 import { estimateOneRM, calcSessionVolume, sortExerciseHistoryByDate } from "$lib/utils/workout";
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
     const exerciseSlug = params.exercise;
-    const response = await fetch(`${API_BASE}/workouts`);
-
-    if (!response.ok) {
-      throw error(response.status, `Failed to fetch workouts: ${response.statusText}`);
-    }
-
-    const workouts = await response.json();
+    const workouts = getWorkouts();
 
     // Find all sessions for this exercise across all workouts
     let exerciseTitle = '';

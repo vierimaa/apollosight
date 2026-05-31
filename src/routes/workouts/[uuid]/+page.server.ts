@@ -1,17 +1,12 @@
 import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { API_BASE } from '$lib/api';
+import { getWorkoutByUuid, getWorkoutsByTitle } from '$lib/db';
 import { calcSessionVolume } from '$lib/utils/workout';
-import type { WorkoutSession } from '$lib/types';
 
 
 export const load: PageServerLoad = async ({ params }) => {
 	try {
-		const response = await fetch(`${API_BASE}/workouts?uuid=${params.uuid}`);
-		if (!response.ok) throw error(response.status, `Failed to fetch workout: ${response.statusText}`);
-
-		const jsonData = await response.json();
-		const workout: WorkoutSession = jsonData[0];
+		const workout = getWorkoutByUuid(params.uuid);
 		if (!workout) throw error(404, 'Not found');
 
 		// Per-exercise volumes (warmup sets excluded)
@@ -24,12 +19,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		const totalVolume = Math.round(calcSessionVolume(workout.exercises));
 
 		// Find previous workout with the same title
-		const titleResponse = await fetch(
-			`${API_BASE}/workouts?title=${encodeURIComponent(workout.title)}`
-		);
-		if (!titleResponse.ok) throw error(titleResponse.status, 'Failed to fetch related workouts');
-
-		const sameTitleWorkouts: WorkoutSession[] = await titleResponse.json();
+		const sameTitleWorkouts = getWorkoutsByTitle(workout.title);
 		const currentDate = new Date(workout.start_time).getTime();
 
 		const previousWorkout =

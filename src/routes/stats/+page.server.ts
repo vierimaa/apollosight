@@ -1,6 +1,6 @@
 import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { API_BASE } from '$lib/api';
+import { getWorkouts } from '$lib/db';
 import { slugify } from '$lib/utils/format';
 import { VALID_SET_TYPES, estimateOneRM, sortWorkoutsByDate } from '$lib/utils/workout';
 import type { WorkoutSession } from '$lib/types';
@@ -24,10 +24,7 @@ interface ExercisePR {
 
 export const load: PageServerLoad = async () => {
 	try {
-		const response = await fetch(`${API_BASE}/workouts`);
-		if (!response.ok) throw error(response.status, response.statusText);
-
-		const workouts: WorkoutSession[] = await response.json();
+		const workouts: WorkoutSession[] = getWorkouts();
 
 		// Sort oldest → newest so we can track progression chronologically
 		const sortedWorkouts = sortWorkoutsByDate(workouts, 'asc');

@@ -1,6 +1,6 @@
 import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { API_BASE } from '$lib/api';
+import { getWorkouts } from '$lib/db';
 import { slugify } from '$lib/utils/format';
 import { calcSessionVolume } from '$lib/utils/workout';
 import type { WorkoutSession } from '$lib';
@@ -16,13 +16,7 @@ export interface ProgramSummary {
 
 export const load: PageServerLoad = async () => {
 	try {
-		const response = await fetch(`${API_BASE}/workouts`);
-
-		if (!response.ok) {
-			throw error(response.status, `Failed to fetch workouts: ${response.statusText}`);
-		}
-
-		const workouts: WorkoutSession[] = await response.json();
+		const workouts: WorkoutSession[] = getWorkouts();
 
 		// Group sessions by workout title
 		const programMap = new Map<

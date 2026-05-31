@@ -1,7 +1,7 @@
 ﻿# ApolloSight - AI Coding Agent Instructions
 
 ## Project Overview
-SvelteKit workout analytics app using **Svelte 5 runes**, Chart.js, and json-server backend.
+SvelteKit workout analytics app using **Svelte 5 runes**, Chart.js, and a direct JSON file backend.
 
 ## Critical Architecture
 
@@ -11,22 +11,32 @@ SvelteKit workout analytics app using **Svelte 5 runes**, Chart.js, and json-ser
    - Groups CSV rows into workout sessions
    - Generates SHA-256 UUIDs from start_time
    - Outputs `sessionData.json` at project root
-3. **Backend**: `npm run backend`  json-server on port 3000
-4. **Frontend**: Fetches from `API_BASE` (defined in `src/lib/api.ts`) in `+page.server.ts` files
+3. **Frontend**: `+page.server.ts` files call functions from `src/lib/db.ts` directly — no HTTP backend needed
+   - `getWorkouts()` — returns all sessions (cached in memory after first read)
+   - `getWorkoutByUuid(uuid)` — returns a single session or null
+   - `getWorkoutsByTitle(title)` — returns all sessions with matching title
+   - Override file path via `DATA_PATH` env variable
 
 ### Development Workflow
 ```bash
-# Terminal 1: Backend (MUST run first)
-npm run backend
-
-# Terminal 2: Frontend
+# Single terminal only
 npm run dev
 
 # Data transformation (when CSV changes)
 npm run transform
 ```
 
-**Critical**: Backend must be running before frontend, or all pages will error.
+**Note**: After replacing `sessionData.json` while the app is running, call `POST /api/reload` to refresh the in-memory cache without restarting.
+
+### Validating Changes
+
+After making any changes to routes, server load functions, or components, run the full e2e suite to confirm nothing is broken:
+
+```bash
+npm run test:e2e
+```
+
+All 82 tests must pass. The suite starts `npm run dev` automatically — no manual server setup needed.
 
 ## Code Style
 
@@ -113,13 +123,11 @@ Always follow this pattern in `+page.server.ts`:
 ```typescript
 import { error, isHttpError } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { API_BASE } from '$lib/api';
+import { getWorkouts } from '$lib/db';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = ({ params }) => {
   try {
-    const response = await fetch(`${API_BASE}/workouts`);
-    if (!response.ok) throw error(response.status, response.statusText);
-    const workouts = await response.json();
+    const workouts = getWorkouts();
     // transform data...
     return { workouts };
   } catch (err) {
@@ -131,10 +139,9 @@ export const load: PageServerLoad = async ({ params }) => {
 ```
 
 **Key rules:**
-- Import `API_BASE` from `$lib/api.ts`  never hardcode `http://localhost:3000`
-- Always check `response.ok` before calling `.json()`
+- Import `getWorkouts` / `getWorkoutByUuid` / `getWorkoutsByTitle` from `$lib/db` — never fetch from an HTTP backend
+- Load functions are synchronous (no `async`/`await` needed unless other async work is present)
 - Always re-throw `isHttpError` errors so 404s are not swallowed as 500s
-- For loads without try/catch, still check `response.ok` and throw appropriately
 
 ## Server vs Client Responsibility
 

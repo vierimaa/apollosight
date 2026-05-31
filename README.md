@@ -20,7 +20,6 @@ A personal workout analytics dashboard built with **SvelteKit 5**, powered by [H
 | **Styling** | Skeleton UI + Tailwind CSS | 4.12 / 4.0 |
 | **Charts** | Chart.js | 4.5 |
 | **Icons** | lucide-svelte | 0.564 |
-| **Backend (dev)** | json-server | 1.0.0-beta.3 |
 | **CSV parsing** | papaparse | 5.5.2 |
 | **Testing (unit)** | vitest | 2.0.4 |
 | **Testing (e2e)** | Playwright | 1.58.2 |
@@ -29,7 +28,7 @@ A personal workout analytics dashboard built with **SvelteKit 5**, powered by [H
 
 ## Data Pipeline
 
-The workflow is: **Hevy CSV** → **Transform** → **JSON** → **Backend** → **SvelteKit Frontend**
+The workflow is: **Hevy CSV** → **Transform** → **JSON** → **SvelteKit Frontend**
 
 1. **Source**: Export workout data from the Hevy app as `workouts.csv`
 2. **Transform** (`npm run transform`):
@@ -38,11 +37,9 @@ The workflow is: **Hevy CSV** → **Transform** → **JSON** → **Backend** →
    - Generates deterministic SHA-256 UUIDs per workout (based on start_time)
    - Groups flat rows into nested sessions → exercises → sets structure
    - Writes `sessionData.json` to project root
-3. **Backend** (`npm run backend`):
-   - json-server watches `sessionData.json`
-   - Exposes REST endpoint: `http://localhost:3000/workouts`
-4. **Frontend** (`npm run dev`):
-   - All `+page.server.ts` load functions fetch from `$lib/api.ts` `API_BASE`
+3. **Frontend** (`npm run dev`):
+   - All `+page.server.ts` load functions read `sessionData.json` directly via `src/lib/db.ts`
+   - Data is cached in memory on first read; call `POST /api/reload` to refresh without restarting
    - Renders data with interactive charts, tables, and filters
 
 ## Getting Started
@@ -68,26 +65,20 @@ The workflow is: **Hevy CSV** → **Transform** → **JSON** → **Backend** →
    ```
    This generates `sessionData.json` at the project root.
 
-4. **Start backend** (Terminal 1)
-   ```bash
-   npm run backend
-   ```
-   The API will be available at `http://localhost:3000`.
-
-5. **Start frontend** (Terminal 2)
+4. **Start dev server**
    ```bash
    npm run dev
    ```
    Open `http://localhost:5173` in your browser.
 
-> **Note**: The backend must be running before the frontend, or all pages will error. You can override the API URL via the `API_URL` environment variable.
+> **Note**: Set `DATA_PATH` to point to a different `sessionData.json` location if needed.
 
 ## Available Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Start SvelteKit dev server (Vite) on port 5173 |
-| `npm run backend` | Start json-server watching `sessionData.json` on port 3000 |
+
 | `npm run build` | Build production bundle |
 | `npm run preview` | Serve production build locally |
 | `npm run check` | Run TypeScript & Svelte type checking |
@@ -121,7 +112,8 @@ src/
 │           └── +page.svelte   # Workout detail view
 │
 ├── lib/
-│   ├── api.ts                 # API_BASE constant, env override
+│   ├── db.ts                  # Direct JSON file reader with in-memory cache
+│   ├── api.ts                 # DATA_PATH constant, env override
 │   ├── types.ts               # Shared TypeScript interfaces
 │   ├── index.ts               # Barrel exports
 │   ├── components/

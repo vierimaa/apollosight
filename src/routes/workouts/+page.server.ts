@@ -1,6 +1,6 @@
 import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import { API_BASE } from "$lib/api";
+import { getWorkouts } from '$lib/db';
 import { calcSessionVolume, sortWorkoutsByDate, toDateString, secondsToMinutes } from "$lib/utils/workout";
 import type { WorkoutSession } from "$lib";
 
@@ -154,13 +154,7 @@ const computeCalendarData = (
 
 export const load: PageServerLoad = async () => {
   try {
-    const response = await fetch(`${API_BASE}/workouts`);
-
-    if (!response.ok) {
-      throw error(response.status, `Failed to fetch workouts: ${response.statusText}`);
-    }
-
-    const workoutData = await response.json();
+    const workoutData = getWorkouts();
 
     if (!workoutData || workoutData.length === 0) {
       throw error(404, "No workouts found");

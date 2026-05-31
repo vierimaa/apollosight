@@ -1,16 +1,10 @@
 import { error, isHttpError } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import { API_BASE } from "$lib/api";
+import { getWorkouts } from '$lib/db';
 
 export const load: PageServerLoad = async () => {
   try {
-    const response = await fetch(`${API_BASE}/workouts`);
-
-    if (!response.ok) {
-      throw error(response.status, `Failed to fetch workouts: ${response.statusText}`);
-    }
-
-    const workouts = await response.json();
+    const workouts = getWorkouts();
 
     // Collect all unique exercise titles with their most recent workout date
     const exerciseLastDate = new Map<string, string>();
